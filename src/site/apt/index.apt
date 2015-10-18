@@ -1,5 +1,13 @@
-# Linux Packaging Maven Plugin
+ ------
+ Introduction
+ ------
+ Gert Dewit
+ ------
+ 2015-10-19
+ ------
 
+Introduction
+ 
   The Linux Packaging Maven Plugin aims to build Linux Distribution specific packages without the use of native packaging 
   tools, thus avoiding the use of non Java binaries and scripts.
 
@@ -8,5 +16,5 @@
   
   In the (near) future the plugin will be able to generate RPM (RedHat, SuSe) and APK (Arch, Alpine) packages but for the 
   moment only the DEB (Debian, Ubuntu) format is implemented.
-  
-  The plugin documentation can be found at <http://www.hobbiton.be/docs/linux-packaging-maven-plugin/>
+
+  You can get started by reading the {{{./usage.html}Usage page}} and the {{{./plugin-info.html}Goals page}}.

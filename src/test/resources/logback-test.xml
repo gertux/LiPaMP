@@ -1,0 +1,11 @@
+<configuration>
+  <appender name="out" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+      <pattern>%d %-5p %t [%c] %m%n</pattern>
+    </encoder>
+  </appender>
+  <logger name="be.hobbiton" level="DEBUG"/>
+  <root level="ERROR">
+    <appender-ref ref="out"/>
+  </root>
+</configuration>

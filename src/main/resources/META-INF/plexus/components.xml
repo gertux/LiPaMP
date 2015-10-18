@@ -1,0 +1,48 @@
+<component-set>
+	<components>
+		<component>
+			<role>org.apache.maven.artifact.handler.ArtifactHandler</role>
+			<role-hint>deb</role-hint>
+			<implementation>org.apache.maven.artifact.handler.DefaultArtifactHandler</implementation>
+			<configuration>
+				<extension>deb</extension>
+				<type>deb</type>
+				<language>none</language>
+				<addedToClasspath>false</addedToClasspath>
+			</configuration>
+		</component>
+		<component>
+			<role>org.apache.maven.lifecycle.mapping.LifecycleMapping</role>
+			<role-hint>deb</role-hint>
+			<implementation>org.apache.maven.lifecycle.mapping.DefaultLifecycleMapping</implementation>
+			<configuration>
+				<phases>
+					<validate />
+					<initialize />
+					<generate-sources />
+					<process-sources />
+					<generate-resources />
+					<process-resources>org.apache.maven.plugins:maven-resources-plugin:resources</process-resources>
+					<compile />
+					<process-classes />
+					<generate-test-sources />
+					<process-test-sources />
+					<generate-test-resources />
+					<process-test-resources />
+					<test-compile />
+					<process-test-classes />
+					<test />
+					<prepare-package />
+					<package />
+					<pre-integration-test />
+					<integration-test />
+					<post-integration-test />
+					<package>be.hobbiton.maven:linux-packaging-maven-plugin:makedeb</package>
+					<install>org.apache.maven.plugins:maven-install-plugin:install</install>
+					<deploy>org.apache.maven.plugins:maven-deploy-plugin:deploy</deploy>
+					<verify />
+				</phases>
+			</configuration>
+		</component>
+	</components>
+</component-set>

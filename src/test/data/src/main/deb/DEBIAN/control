@@ -1,0 +1,10 @@
+Package: hiapp-deb-pkg
+Section: devel
+Priority: optional
+Maintainer: Gert Dewit
+Installed-Size: 0
+Version: 1.0.1
+Architecture: all
+Description: Cloud hello server
+ Cloud hello server - Non Secure Implementation
+Depends: oracle-java8

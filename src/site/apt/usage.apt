@@ -1,0 +1,20 @@
+ ------
+ Usage
+ ------
+ Gert Dewit
+ ------
+ 2015-10-19
+ ------
+ 
+ Usage
+   
+   As this plugin is bound to the lifecycle of the <<deb>> type, one would define her artifact like:
+
++-------
+<project ...>
+  <groupId>be.hobbiton.app</groupId>
+  <artifactId>hiapp</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+  <packaging>deb</packaging>
+</project>
++-------  
