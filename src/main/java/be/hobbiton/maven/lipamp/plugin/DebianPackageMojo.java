@@ -1,5 +1,7 @@
 package be.hobbiton.maven.lipamp.plugin;
 
+import static be.hobbiton.maven.lipamp.common.ArchiveEntryCollector.*;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -8,9 +10,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.model.Developer;
@@ -24,54 +24,85 @@ import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.util.StringUtils;
 
 import be.hobbiton.maven.lipamp.common.ArchiveEntry;
-import be.hobbiton.maven.lipamp.common.ArchiveEntry.ArchiveEntryType;
+import be.hobbiton.maven.lipamp.common.ArchiveEntryCollector;
 import be.hobbiton.maven.lipamp.common.DirectoryArchiveEntry;
 import be.hobbiton.maven.lipamp.common.FileArchiveEntry;
 import be.hobbiton.maven.lipamp.deb.DebianControl;
 import be.hobbiton.maven.lipamp.deb.DebianPackage;
 
-
+/**
+ * Create a Debian package.
+ * <p>
+ * Binds to the package lifecycle phase for artifacts of type deb
+ *
+ */
 @Mojo(name = "makedeb", requiresProject = true, requiresDependencyResolution = ResolutionScope.COMPILE)
 public class DebianPackageMojo extends AbstractMojo {
     private static final String CURRENT_PATH = ".";
     /** As the targets for this mojo are primary Java apps, the package is by default architecture independent */
     protected static final String DEFAULT_ARCHITECTURE = "all";
-    private static final String SLASH = "/";
     protected static final String SNAPSHOT_SUFFIX = "-SNAPSHOT";
-    protected static final String DEFAULT_USERNAME = "root";
-    protected static final String DEFAULT_GROUPNAME = "root";
-    protected static final String DEFAULT_FILEMODE = "0644";
-    protected static final String DEFAULT_DIRMODE = "0755";
 
+    /**
+     * The maven project
+     */
     @Parameter(required = true, defaultValue = "${project}")
     private MavenProject project;
 
+    /**
+     * The username to use for files and folders when there's no explicit username set
+     */
     @Parameter(defaultValue = DEFAULT_USERNAME)
     private String defaultUsername;
 
+    /**
+     * The group name to use for files and folders when there's no explicit group name set
+     */
     @Parameter(defaultValue = DEFAULT_GROUPNAME)
     private String defaultGroupname;
 
+    /**
+     * The mode to use for files when there's no explicit mode set. Specified using octal notation.
+     */
     @Parameter(defaultValue = DEFAULT_FILEMODE)
     private String defaultFileMode;
     private Integer defaultFileModeValue;
 
+    /**
+     * The mode to use for folders when there's no explicit mode set. Specified using octal notation.
+     */
     @Parameter(defaultValue = DEFAULT_DIRMODE)
     private String defaultDirectoryMode;
     private Integer defaultDirectoryModeValue;
 
+    /**
+     * The dependent artifacts that should be packaged.
+     */
     @Parameter
     private ArtifactPackageEntry[] artifacts;
 
+    /**
+     * The folders that should be created and packaged.
+     */
     @Parameter
     private FolderEntry[] folders;
 
+    /**
+     * The short description
+     */
     @Parameter(defaultValue = "${project.name}")
     private String descriptionSynopsis;
 
+    /**
+     * The extended description
+     */
     @Parameter(defaultValue = "${project.description}")
     private String description;
 
+    /**
+     * The maintainer information, if not specified the first developer from the developer list is used or when that
+     * fails the value of the user.name system property
+     */
     @Parameter
     private String maintainer;
 
@@ -79,10 +110,10 @@ public class DebianPackageMojo extends AbstractMojo {
     public void execute() throws MojoExecutionException, MojoFailureException {
         File packageBasedir = new File(this.project.getBasedir(), "src/main/deb");
         if (packageBasedir.isDirectory()) {
-            List<ArchiveEntry> dataFiles = new ArrayList<ArchiveEntry>();
+            ArchiveEntryCollector dataFilesCollector = new ArchiveEntryCollector();
             List<File> controlFiles = new ArrayList<File>();
-            findFiles(packageBasedir, dataFiles, controlFiles);
-            DebianPackage debianPackage = new DebianPackage(controlFiles, dataFiles);
+            findFiles(packageBasedir, dataFilesCollector, controlFiles);
+            DebianPackage debianPackage = new DebianPackage(controlFiles, dataFilesCollector.getEntries());
             debianPackage.write(getPackageFile());
         } else {
             throw new MojoFailureException("Missing package base directory");
@@ -129,10 +160,9 @@ public class DebianPackageMojo extends AbstractMojo {
         return System.getProperty("user.name");
     }
 
-    private void findFiles(File packageBasedir, Collection<ArchiveEntry> dataFiles, Collection<File> controlFiles)
+    private void findFiles(File packageBasedir, ArchiveEntryCollector dataFilesCollector, Collection<File> controlFiles)
             throws MojoExecutionException, MojoFailureException {
         boolean haveControl = false;
-        Map<String, ArchiveEntry> dataPaths = new HashMap<String, ArchiveEntry>();
         for (File file : packageBasedir.listFiles()) {
             if ("DEBIAN".equals(file.getName())) {
                 // add control files
@@ -144,7 +174,7 @@ public class DebianPackageMojo extends AbstractMojo {
                     controlFiles.add(controlFile);
                 }
             } else {
-                addDataFile(dataFiles, file, DebianPackage.CURRENT_DIR, dataPaths);
+                addDataFile(dataFilesCollector, file, "/");
             }
         }
         if (!haveControl) {
@@ -154,18 +184,20 @@ public class DebianPackageMojo extends AbstractMojo {
             for (ArtifactPackageEntry artifactEntry : this.artifacts) {
                 if (StringUtils.isNotBlank(artifactEntry.getDestination())) {
                     Artifact depArtifact = getDependentArtifact(artifactEntry);
+                    File destFile = null;
                     if (artifactEntry.getDestination().endsWith("/")) {
-                        artifactEntry.setDestination(artifactEntry.getDestination() + depArtifact.getArtifactId() + "."
-                                + depArtifact.getType());
+                        destFile = new File(cleanPath(artifactEntry.getDestination() + depArtifact.getArtifactId() + "."
+                                + depArtifact.getType()));
+                    } else {
+                        destFile = new File(cleanPath(artifactEntry.getDestination()));
                     }
-                    File destFile = new File(cleanPath(artifactEntry.getDestination()));
-                    FolderEntry parentFolder = new FolderEntry(destFile.getParent(), null, null, null);
-                    addFolder(dataFiles, parentFolder, dataPaths);
+                    DirectoryArchiveEntry parentFolder = new DirectoryArchiveEntry(destFile.getParent(), null, null,
+                            ArchiveEntry.INVALID_MODE);
+                    dataFilesCollector.add(parentFolder);
                     FileArchiveEntry fileEntry = new FileArchiveEntry(destFile.getPath(), depArtifact.getFile(),
-                            getUsername(artifactEntry.getUsername()), getGroupname(artifactEntry.getGroupname()),
+                            artifactEntry.getUsername(), artifactEntry.getGroupname(),
                             getMode(artifactEntry.getMode(), destFile.getPath()));
-                    dataFiles.add(fileEntry);
-                    dataPaths.put(fileEntry.getName(), fileEntry);
+                    dataFilesCollector.add(fileEntry);
                 } else {
                     throw new MojoFailureException("Invalid artifact destination specification");
                 }
@@ -173,23 +205,21 @@ public class DebianPackageMojo extends AbstractMojo {
         }
         if (this.folders != null && this.folders.length > 0) {
             for (FolderEntry folder : this.folders) {
-                String path = folder.getPath();
-                if (StringUtils.isNotBlank(path)) {
-                    folder.setPath(cleanPath(folder.getPath()));
-                    addFolder(dataFiles, folder, dataPaths);
+                if (StringUtils.isNotBlank(folder.getPath())) {
+                    DirectoryArchiveEntry parentFolder = new DirectoryArchiveEntry(folder.getPath(),
+                            folder.getUsername(), folder.getGroupname(), getMode(folder.getMode(), folder.getPath()));
+                    dataFilesCollector.add(parentFolder);
                 }
             }
         }
     }
 
     private Artifact getDependentArtifact(ArtifactPackageEntry artifactEntry) throws MojoFailureException {
-        if (StringUtils.isNotBlank(artifactEntry.getArtifactId())
-                && StringUtils.isNotBlank(artifactEntry.getGroupId())) {
+        if (artifactEntry.isValid()) {
             if (this.project.getDependencyArtifacts() != null) {
                 for (Object depObj : this.project.getDependencyArtifacts()) {
                     Artifact depArtifact = (Artifact) depObj;
-                    if (artifactEntry.getArtifactId().equals(depArtifact.getArtifactId())
-                            && artifactEntry.getGroupId().equals(depArtifact.getGroupId())) {
+                    if (artifactEntry.compareTo(depArtifact) == 0) {
                         return depArtifact;
                     }
                 }
@@ -197,8 +227,7 @@ public class DebianPackageMojo extends AbstractMojo {
         } else {
             throw new MojoFailureException("Invalid artifact specification");
         }
-        throw new MojoFailureException(
-                String.format("Artifact %s:%s not found", artifactEntry.getGroupId(), artifactEntry.getArtifactId()));
+        throw new MojoFailureException(String.format("Artifact %s not found", artifactEntry.toString()));
     }
 
     private String cleanPath(String path) {
@@ -214,58 +243,9 @@ public class DebianPackageMojo extends AbstractMojo {
         return newPath;
     }
 
-    private void addFolder(Collection<ArchiveEntry> dataFiles, FolderEntry folder, Map<String, ArchiveEntry> dataPaths)
-            throws MojoFailureException {
-        File folderFile = new File(folder.getPath());
-        File parent = null;
-        if ((parent = folderFile.getParentFile()) != null) {
-            if (!CURRENT_PATH.equals(parent.getPath())) {
-                addFolder(dataFiles, new FolderEntry(parent.getPath(), this.defaultUsername, this.defaultGroupname,
-                        this.defaultDirectoryMode), dataPaths);
-            }
-        }
-        ArchiveEntry archiveEntry = dataPaths.get(folder.getPath() + "/");
-        if (archiveEntry != null) {
-            if (ArchiveEntryType.D.equals(archiveEntry.getType())) {
-                if (StringUtils.isNotBlank(folder.getUsername())) {
-                    getLog().debug(
-                            String.format("Changing username to %s for %s", folder.getUsername(), folder.getPath()));
-                    archiveEntry.setUserName(folder.getUsername().trim());
-                }
-                if (StringUtils.isNotBlank(folder.getGroupname())) {
-                    getLog().debug(
-                            String.format("Changing groupname to %s for %s", folder.getGroupname(), folder.getPath()));
-                    archiveEntry.setGroupName(folder.getGroupname().trim());
-                }
-                if (StringUtils.isNotBlank(folder.getMode())) {
-                    int mode = getMode(folder.getMode(), folder.getPath());
-                    getLog().debug(String.format("Changing mode to %04o for %s", mode, folder.getPath()));
-                    archiveEntry.setMode(mode);
-                }
-            } else {
-                throw new MojoFailureException(
-                        String.format("Path \"%s\" already exists, but is not a folder!", folder.getPath()));
-            }
-        } else {
-            DirectoryArchiveEntry directoryArchiveEntry = new DirectoryArchiveEntry(folder.getPath(),
-                    getUsername(folder.getUsername()), getGroupname(folder.getGroupname()),
-                    getMode(folder.getMode(), folder.getPath()));
-            dataFiles.add(directoryArchiveEntry);
-            dataPaths.put(directoryArchiveEntry.getName(), directoryArchiveEntry);
-        }
-    }
-
-    private String getUsername(String username) {
-        return (StringUtils.isBlank(username) ? this.defaultUsername : username.trim());
-    }
-
-    private String getGroupname(String groupname) {
-        return (StringUtils.isBlank(groupname) ? this.defaultGroupname : groupname.trim());
-    }
-
     private int getMode(String mode, String path) throws MojoFailureException {
         if (StringUtils.isBlank(mode)) {
-            return getDefaultDirectoryMode();
+            return ArchiveEntry.INVALID_MODE;
         }
         try {
             return Integer.parseInt(mode, 8);
@@ -312,24 +292,20 @@ public class DebianPackageMojo extends AbstractMojo {
         return outputDir;
     }
 
-    private void addDataFile(Collection<ArchiveEntry> dataFiles, File datafile, String prefix,
-            Map<String, ArchiveEntry> dataPaths) {
+    private void addDataFile(ArchiveEntryCollector dataFilesCollector, File datafile, String prefix) {
         getLog().debug("Adding data " + datafile.getAbsolutePath());
+        String name = prefix + datafile.getName();
         if (datafile.isDirectory()) {
-            String name = prefix + datafile.getName() + SLASH;
             DirectoryArchiveEntry dirEntry = new DirectoryArchiveEntry(name, this.defaultUsername,
                     this.defaultGroupname, getDefaultDirectoryMode());
-            dataFiles.add(dirEntry);
-            dataPaths.put(dirEntry.getName(), dirEntry);
+            dataFilesCollector.add(dirEntry);
             for (File nestedDataFile : datafile.listFiles()) {
-                addDataFile(dataFiles, nestedDataFile, name, dataPaths);
+                addDataFile(dataFilesCollector, nestedDataFile, name + "/");
             }
         } else {
-            String name = prefix + datafile.getName();
             FileArchiveEntry fileEntry = new FileArchiveEntry(name, datafile, this.defaultUsername,
                     this.defaultGroupname, getDefaultFileMode());
-            dataFiles.add(fileEntry);
-            dataPaths.put(fileEntry.getName(), fileEntry);
+            dataFilesCollector.add(fileEntry);
         }
     }
 

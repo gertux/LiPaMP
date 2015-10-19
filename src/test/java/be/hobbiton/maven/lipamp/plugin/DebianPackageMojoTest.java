@@ -1,5 +1,6 @@
 package be.hobbiton.maven.lipamp.plugin;
 
+import static be.hobbiton.maven.lipamp.common.ArchiveEntryCollector.*;
 import static be.hobbiton.maven.lipamp.common.TestConstants.*;
 import static be.hobbiton.maven.lipamp.plugin.DebianPackageMojo.*;
 import static org.junit.Assert.*;
@@ -15,7 +16,6 @@ import java.util.regex.Pattern;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.DefaultArtifact;
 import org.apache.maven.artifact.handler.DefaultArtifactHandler;
-import org.apache.maven.artifact.versioning.VersionRange;
 import org.apache.maven.model.Build;
 import org.apache.maven.model.Developer;
 import org.apache.maven.model.Model;
@@ -58,17 +58,13 @@ public class DebianPackageMojoTest {
     private static final List<Developer> DEVELOPERS = new ArrayList<Developer>();
     private static final FolderEntry[] FOLDERS = new FolderEntry[] {
             new FolderEntry("/var/log/hiapp", CONFIGUSER, CONFIGGROUP, CONFIGMODE) };
-    private static final String DEP_ARTIFACTID = "hiapp";
-    private static final String DEP_GROUPID = "be.hobbiton.cloud";
-    private static final VersionRange DEP_VERSION = VersionRange.createFromVersion("1.0.0");
-    private static final String DEP_DESTINATION = "/opt/hiapp/";
     private static final String DEP_FILEPATH = "./opt/hiapp/" + DEP_ARTIFACTID + ".jar";
     private static final String ART_GROUP = CONFIGGROUP;
     private static final String ART_USER = "bin";
     private static final ArtifactPackageEntry[] ARTIFACTS = new ArtifactPackageEntry[] { new ArtifactPackageEntry(
-            DEP_ARTIFACTID, DEP_GROUPID, DEP_DESTINATION, ART_USER, ART_GROUP, CONFIGMODE) };
+            DEP_ARTIFACTID, DEP_GROUPID, DEP_PACKAGING, DEP_DESTINATION, ART_USER, ART_GROUP, CONFIGMODE) };
     private static final DefaultArtifact DEP_ARTIFACT = new DefaultArtifact(DEP_GROUPID, DEP_ARTIFACTID, DEP_VERSION,
-            "compile", "jar", null, new DefaultArtifactHandler());
+            "compile", DEP_PACKAGING, null, new DefaultArtifactHandler());
     private Model model;
     private Build build;
     private MavenProject project;
@@ -118,8 +114,9 @@ public class DebianPackageMojoTest {
         this.project.setFile(PROJECT_FILE);
         this.mojo.execute();
         DebInfo debianInfo = new DebInfo(PACKAGE_FILE);
+        LOGGER.debug(debianInfo.toString());
         assertEquals(3, debianInfo.getControlFiles().size());
-        assertEquals(5, debianInfo.getDataFiles().size());
+        assertEquals(6, debianInfo.getDataFiles().size());
         assertEquals(FILE_PACKAGENAME, debianInfo.getControl().getPackageName());
         assertEquals(FILE_VERSION, debianInfo.getControl().getVersion());
         assertEquals(FILE_ARCHITECTURE, debianInfo.getControl().getArchitecture());
@@ -136,28 +133,7 @@ public class DebianPackageMojoTest {
         DebInfo debianInfo = new DebInfo(PACKAGE_FILE);
         LOGGER.debug(debianInfo.toString());
         assertEquals(3, debianInfo.getControlFiles().size());
-        assertEquals(8, debianInfo.getDataFiles().size());
-        assertEquals(FILE_PACKAGENAME, debianInfo.getControl().getPackageName());
-        assertEquals(FILE_VERSION, debianInfo.getControl().getVersion());
-        assertEquals(FILE_ARCHITECTURE, debianInfo.getControl().getArchitecture());
-        assertEquals(FILE_MAINTAINER, debianInfo.getControl().getMaintainer());
-        assertEquals(FILE_DESCR_SYNOPSIS, debianInfo.getControl().getDescriptionSynopsis());
-        assertEquals(FILE_DESCRIPTION, debianInfo.getControl().getDescription());
-    }
-
-    @Test
-    public void testExecuteWithArtifact() throws Exception {
-        this.project.setFile(PROJECT_FILE);
-        Set<Artifact> deps = new HashSet<Artifact>();
-        deps.add(DEP_ARTIFACT);
-        this.project.setDependencyArtifacts(deps);
-        this.mojo.setArtifacts(ARTIFACTS);
-        this.mojo.execute();
-        DebInfo debianInfo = new DebInfo(PACKAGE_FILE);
-        LOGGER.debug(debianInfo.toString());
-        assertEquals(3, debianInfo.getControlFiles().size());
-        assertEquals(8, debianInfo.getDataFiles().size());
-        assertInPackage(debianInfo, DEP_FILEPATH, ART_USER, ART_GROUP, CONFIGMODE_VALUE);
+        assertEquals(9, debianInfo.getDataFiles().size());
         assertEquals(FILE_PACKAGENAME, debianInfo.getControl().getPackageName());
         assertEquals(FILE_VERSION, debianInfo.getControl().getVersion());
         assertEquals(FILE_ARCHITECTURE, debianInfo.getControl().getArchitecture());
@@ -183,7 +159,7 @@ public class DebianPackageMojoTest {
         DebInfo debianInfo = new DebInfo(PACKAGE_FILE);
         LOGGER.debug(debianInfo.toString());
         assertEquals(3, debianInfo.getControlFiles().size());
-        assertEquals(11, debianInfo.getDataFiles().size());
+        assertEquals(12, debianInfo.getDataFiles().size());
         assertInPackage(debianInfo, DEP_FILEPATH, ART_USER, ART_GROUP, CONFIGMODE_VALUE);
         assertEquals(ARTIFACTID, debianInfo.getControl().getPackageName());
         assertEquals(VERSION, debianInfo.getControl().getVersion());
@@ -193,6 +169,27 @@ public class DebianPackageMojoTest {
         assertEquals(DESCRIPTION, debianInfo.getControl().getDescription());
     }
 
+    @Test
+    public void testExecuteWithArtifact() throws Exception {
+        this.project.setFile(PROJECT_FILE);
+        Set<Artifact> deps = new HashSet<Artifact>();
+        deps.add(DEP_ARTIFACT);
+        this.project.setDependencyArtifacts(deps);
+        this.mojo.setArtifacts(ARTIFACTS);
+        this.mojo.execute();
+        DebInfo debianInfo = new DebInfo(PACKAGE_FILE);
+        LOGGER.debug(debianInfo.toString());
+        assertEquals(3, debianInfo.getControlFiles().size());
+        assertEquals(9, debianInfo.getDataFiles().size());
+        assertInPackage(debianInfo, DEP_FILEPATH, ART_USER, ART_GROUP, CONFIGMODE_VALUE);
+        assertEquals(FILE_PACKAGENAME, debianInfo.getControl().getPackageName());
+        assertEquals(FILE_VERSION, debianInfo.getControl().getVersion());
+        assertEquals(FILE_ARCHITECTURE, debianInfo.getControl().getArchitecture());
+        assertEquals(FILE_MAINTAINER, debianInfo.getControl().getMaintainer());
+        assertEquals(FILE_DESCR_SYNOPSIS, debianInfo.getControl().getDescriptionSynopsis());
+        assertEquals(FILE_DESCRIPTION, debianInfo.getControl().getDescription());
+    }
+
     @Test(expected = MojoFailureException.class)
     public void testExecuteWithArtifactDepNotFound() throws Exception {
         this.project.setFile(PROJECT_FILE);
@@ -200,16 +197,28 @@ public class DebianPackageMojoTest {
         this.mojo.execute();
     }
 
+    @Test(expected = MojoFailureException.class)
+    public void testExecuteWithArtifactDepWrongType() throws Exception {
+        this.project.setFile(PROJECT_FILE);
+        Set<Artifact> deps = new HashSet<Artifact>();
+        DefaultArtifact depArtifact = new DefaultArtifact(DEP_GROUPID, DEP_ARTIFACTID, DEP_VERSION, "compile", "war",
+                null, new DefaultArtifactHandler());
+        depArtifact.setFile(new File("src/test/data/hiapp-1.0.0.jar"));
+        deps.add(depArtifact);
+        this.project.setDependencyArtifacts(deps);
+        this.mojo.setArtifacts(ARTIFACTS);
+        this.mojo.execute();
+    }
+
     @Test
     public void testExecuteChangeFolderAttributes() throws Exception {
         this.project.setFile(PROJECT_FILE);
-        this.mojo.setFolders(
-                new FolderEntry[] { new FolderEntry(CONFIG_FOLDERNAME, CONFIGUSER, CONFIGGROUP, null) });
+        this.mojo.setFolders(new FolderEntry[] { new FolderEntry(CONFIG_FOLDERNAME, CONFIGUSER, CONFIGGROUP, null) });
         this.mojo.execute();
         DebInfo debianInfo = new DebInfo(PACKAGE_FILE);
         LOGGER.debug(debianInfo.toString());
         assertEquals(3, debianInfo.getControlFiles().size());
-        assertEquals(5, debianInfo.getDataFiles().size());
+        assertEquals(6, debianInfo.getDataFiles().size());
         assertInPackage(debianInfo, CONFIG_FOLDERPATH, CONFIGUSER, CONFIGGROUP, DEFAULT_DIRMODE_VALUE);
         assertEquals(FILE_PACKAGENAME, debianInfo.getControl().getPackageName());
         assertEquals(FILE_VERSION, debianInfo.getControl().getVersion());
@@ -227,7 +236,7 @@ public class DebianPackageMojoTest {
         DebInfo debianInfo = new DebInfo(PACKAGE_FILE);
         LOGGER.debug(debianInfo.toString());
         assertEquals(3, debianInfo.getControlFiles().size());
-        assertEquals(5, debianInfo.getDataFiles().size());
+        assertEquals(6, debianInfo.getDataFiles().size());
         assertInPackage(debianInfo, CONFIG_FOLDERPATH, DEFAULT_USERNAME, DEFAULT_GROUPNAME, CONFIGMODE_VALUE);
         assertEquals(FILE_PACKAGENAME, debianInfo.getControl().getPackageName());
         assertEquals(FILE_VERSION, debianInfo.getControl().getVersion());
@@ -247,7 +256,7 @@ public class DebianPackageMojoTest {
         this.mojo.execute();
         DebInfo debianInfo = new DebInfo(PACKAGE_FILE);
         assertEquals(3, debianInfo.getControlFiles().size());
-        assertEquals(5, debianInfo.getDataFiles().size());
+        assertEquals(6, debianInfo.getDataFiles().size());
         assertEquals(ARTIFACTID, debianInfo.getControl().getPackageName());
         assertEquals(VERSION, debianInfo.getControl().getVersion());
         assertEquals(DEFAULT_ARCHITECTURE, debianInfo.getControl().getArchitecture());

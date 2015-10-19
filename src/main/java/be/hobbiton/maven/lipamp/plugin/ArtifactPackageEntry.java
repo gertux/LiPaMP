@@ -1,8 +1,16 @@
 package be.hobbiton.maven.lipamp.plugin;
 
-public class ArtifactPackageEntry {
+import org.apache.maven.artifact.Artifact;
+import org.codehaus.plexus.util.StringUtils;
+
+/**
+ * Artifact to be included in a package
+ */
+public class ArtifactPackageEntry implements Comparable<Artifact> {
+    protected static String DEFAULT_TYPE = "jar";
     private String artifactId;
     private String groupId;
+    private String type = DEFAULT_TYPE;
     private String destination;
     private String username;
     private String groupname;
@@ -12,11 +20,12 @@ public class ArtifactPackageEntry {
         super();
     }
 
-    public ArtifactPackageEntry(String artifactId, String groupId, String destination, String username,
+    public ArtifactPackageEntry(String artifactId, String groupId, String type, String destination, String username,
             String groupname, String mode) {
         super();
         this.artifactId = artifactId;
         this.groupId = groupId;
+        setType(type);
         this.destination = destination;
         this.username = username;
         this.groupname = groupname;
@@ -37,6 +46,14 @@ public class ArtifactPackageEntry {
 
     public void setGroupId(String groupId) {
         this.groupId = groupId;
+    }
+
+    public String getType() {
+        return this.type;
+    }
+
+    public final void setType(String type) {
+        this.type = StringUtils.isNotBlank(type) ? type : DEFAULT_TYPE;
     }
 
     public String getDestination() {
@@ -69,5 +86,30 @@ public class ArtifactPackageEntry {
 
     public void setMode(String mode) {
         this.mode = mode;
+    }
+
+    @Override
+    public String toString() {
+        if (isValid()) {
+            return String.format("%s:%s:%s", this.groupId, this.artifactId, this.type);
+        }
+        return super.toString();
+    }
+
+    public boolean isValid() {
+        return (StringUtils.isNotBlank(this.artifactId)) && (StringUtils.isNotBlank(this.groupId))
+                && (StringUtils.isNotBlank(this.type));
+    }
+
+    @Override
+    public int compareTo(Artifact a) {
+        int result = this.groupId.compareTo(a.getGroupId());
+        if (result == 0) {
+            result = this.artifactId.compareTo(a.getArtifactId());
+            if (result == 0) {
+                result = this.type.compareTo(a.getType());
+            }
+        }
+        return result;
     }
 }

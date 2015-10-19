@@ -151,27 +151,27 @@ public class DebInfo {
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append(DebianControlField.PACKAGE.getFieldname()).append(": ").append(this.control.getPackageName())
-                .append(LINEFEED);
+        .append(LINEFEED);
         if (StringUtils.isNotBlank(this.control.getSection())) {
             sb.append(DebianControlField.SECTION.getFieldname()).append(": ").append(this.control.getSection())
-                    .append(LINEFEED);
+            .append(LINEFEED);
         }
         if (StringUtils.isNotBlank(this.control.getPriority())) {
             sb.append(DebianControlField.PRIORITY.getFieldname()).append(": ").append(this.control.getPriority())
-                    .append(LINEFEED);
+            .append(LINEFEED);
         }
         sb.append(DebianControlField.MAINTAINER.getFieldname()).append(": ").append(this.control.getMaintainer())
-                .append(LINEFEED);
+        .append(LINEFEED);
         if (StringUtils.isNotBlank(this.control.getInstalledSize())) {
             sb.append(DebianControlField.INSTALLED_SIZE.getFieldname()).append(": ")
-                    .append(this.control.getInstalledSize()).append(LINEFEED);
+            .append(this.control.getInstalledSize()).append(LINEFEED);
         }
         sb.append(DebianControlField.VERSION.getFieldname()).append(": ").append(this.control.getVersion())
-                .append(LINEFEED);
+        .append(LINEFEED);
         sb.append(DebianControlField.ARCHITECTURE.getFieldname()).append(": ").append(this.control.getArchitecture())
-                .append(LINEFEED);
+        .append(LINEFEED);
         sb.append(DebianControlField.DESCRIPTION.getFieldname()).append(": ")
-                .append(this.control.getDescriptionSynopsis()).append(LINEFEED);
+        .append(this.control.getDescriptionSynopsis()).append(LINEFEED);
         if (this.control.getDescription() != null) {
             sb.append(this.control.getDescription()).append(LINEFEED);
         }
@@ -180,9 +180,8 @@ public class DebInfo {
             sb.append(controlFile.getName()).append(LINEFEED);
         }
         sb.append("\nData files:\n");
-        for (ArchiveEntry controlFile : getDataFiles()) {
-            sb.append(String.format("%s %04o %8s/%-8s %s\n", controlFile.getType(), controlFile.getMode(),
-                    controlFile.getUserName(), controlFile.getGroupName(), controlFile.getName()));
+        for (ArchiveEntry dataFile : getDataFiles()) {
+            sb.append(dataFile);
         }
         return sb.toString();
     }

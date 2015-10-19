@@ -109,6 +109,13 @@ public class DebianPackage {
         return writeCompressedArchive(debianArchiveOutputStream, this.dataFiles);
     }
 
+    private String getTarName(String path) {
+        if (path.startsWith("/")) {
+            return "." + path;
+        }
+        return path;
+    }
+
     private File writeCompressedArchive(ArArchiveOutputStream debianArchiveOutputStream,
             Collection<ArchiveEntry> archiveEntries) throws DebianPackageException {
         CompressorOutputStream gzippedOutput = null;
@@ -120,7 +127,7 @@ public class DebianPackage {
                     new FileOutputStream(outputFile));
             tarOutput = new TarArchiveOutputStream(gzippedOutput);
             for (ArchiveEntry fileEntry : archiveEntries) {
-                TarArchiveEntry entry = new TarArchiveEntry(fileEntry.getName());
+                TarArchiveEntry entry = new TarArchiveEntry(getTarName(fileEntry.getName()));
                 if (ArchiveEntryType.F.equals(fileEntry.getType())) {
                     if (fileEntry.getFile() == null) {
                         throw new DebianPackageException(

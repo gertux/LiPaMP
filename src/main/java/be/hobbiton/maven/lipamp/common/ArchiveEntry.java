@@ -3,11 +3,12 @@ package be.hobbiton.maven.lipamp.common;
 import java.io.File;
 
 public class ArchiveEntry {
+    public static int INVALID_MODE;
     private String name;
     private File file;
     private String userName;
     private String groupName;
-    private int mode;
+    private int mode = INVALID_MODE;
     private ArchiveEntryType type;
 
     public ArchiveEntry(String name, File file, String userName, String groupName, int mode, ArchiveEntryType type) {
@@ -16,12 +17,16 @@ public class ArchiveEntry {
         this.file = file;
         this.userName = userName;
         this.groupName = groupName;
-        this.mode = mode;
+        setMode(mode);
         this.type = type;
     }
 
     public String getName() {
         return this.name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
     }
 
     public File getFile() {
@@ -52,11 +57,16 @@ public class ArchiveEntry {
         this.groupName = groupName;
     }
 
-    public void setMode(int mode) {
-        this.mode = mode;
+    public final void setMode(int mode) {
+        this.mode = (mode > INVALID_MODE) ? mode : INVALID_MODE;
     }
 
     public static enum ArchiveEntryType {
         F, D, L, S
+    }
+
+    @Override
+    public String toString() {
+        return String.format("%s %04o %8s/%-8s %s\n", getType(), getMode(), getUserName(), getGroupName(), getName());
     }
 }

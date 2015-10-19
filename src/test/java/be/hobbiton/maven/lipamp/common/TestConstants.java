@@ -2,6 +2,8 @@ package be.hobbiton.maven.lipamp.common;
 
 import java.io.File;
 
+import org.apache.maven.artifact.versioning.VersionRange;
+
 public final class TestConstants {
     public static final File BASEDIR = new File("src/test/data/src/main/deb");
     public static final File CONF_BASEDIR = new File(BASEDIR, "DEBIAN");
@@ -16,6 +18,13 @@ public final class TestConstants {
     public static final String FILE_SECTION = "devel";
     public static final String FILE_PACKAGENAME = "hiapp-deb-pkg";
     public static final String FILE_ARCHITECTURE = "all";
+
+    public static final String DEP_ARTIFACTID = "hiapp";
+    public static final String DEP_GROUPID = "be.hobbiton.cloud";
+    public static final String DEP_PACKAGING = "jar";
+    public static final VersionRange DEP_VERSION = VersionRange.createFromVersion("1.0.0");
+    public static final String DEP_DESTINATION = "/opt/hiapp/";
+    public static final String DEP_SCOPE = "compile";
 
     private TestConstants() {
     }
