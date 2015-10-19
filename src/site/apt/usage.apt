@@ -6,15 +6,31 @@
  2015-10-19
  ------
  
- Usage
-   
-   As this plugin is bound to the lifecycle of the <<deb>> type, one would define her artifact like:
+Usage
 
-+-------
+* Debian
+   
+  As this plugin is bound to the lifecycle of the <<deb>> type, one would define her artifact like:
+
++---
 <project ...>
-  <groupId>be.hobbiton.app</groupId>
-  <artifactId>hiapp</artifactId>
-  <version>1.0.0-SNAPSHOT</version>
-  <packaging>deb</packaging>
+	<groupId>be.hobbiton.app</groupId>
+	<artifactId>hiapp</artifactId>
+	<version>1.0.0-SNAPSHOT</version>
+	<packaging>deb</packaging>
 </project>
-+-------  
++---
+
+  The plugin is activated in the <<\<build\>>> section, take care not to forget to enable extensions:
+  
++---
+<build>
+	<plugins>
+		<plugin>
+			<groupId>be.hobbiton.maven</groupId>
+			<artifactId>linux-packaging-maven-plugin</artifactId>
+			<extensions>true</extensions>
+		</plugin>
+	</plugins>
+</build>  
++---

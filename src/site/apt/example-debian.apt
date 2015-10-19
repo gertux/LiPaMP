@@ -1,0 +1,212 @@
+ ------
+ Debian example
+ ------
+ Gert Dewit
+ ------
+ 2015-10-19
+ ------
+ 
+Debian example
+
+  The example describes a module that packages a Spring Boot web application that is started at 
+  boot time using {{{https://wiki.debian.org/Upstart}Upstart}}.
+  
+  The app needs to run as a non privileged user which is created using a postinstall script.
+  
+  The non priviledged user should be granted the privilege to write to the application log folder.
+  
+* Folder structure
+
++---
+  pom.xml
+  +--- src/main/deb
+      +--- DEBIAN
+      |   +--- preinst
+      +--- etc/init
+          +--- hiapp.conf
++---
+
+  The <<<src/main/deb>>> folder is the starting point for the file system resources. The DEBIAN 
+  subfolder contains the Debian control files, in this example only <<preinst>> is used, other 
+  possible files are <<postinst>>, <<prerm>>, <<postrm>>, ...
+  
+  The other folders and files are considered to be data files, in this example the upstart script
+  hiapp.conf and it's parent folders become data archive members using the default username and
+  groupname. The permissions for these files and folders are the default file and folder mode 
+  respectively.
+  
+* Pom
+
++---
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>be.hobbiton.app</groupId>
+	<artifactId>hiapp</artifactId>
+	<version>1.0.0-SNAPSHOT</version>
+	<packaging>deb</packaging>
+	<name>Cloud hi server</name>
+	<description>Cloud hi server - Non Secure Implementation</description>
+
+	<developers>
+		<developer>
+			<name>Sam</name>
+			<email>sam@hobbiton.be</email>
+		</developer>
+	</developers>
+...
++---
+
+  The use of <<deb>> as the packaging type is significant.
+  
++---
+...
+	<dependencies>
+		<dependency>
+			<groupId>be.hobbiton.app</groupId>
+			<artifactId>hiapp-web</artifactId>
+			<type>jar</type>
+			<version>${project.version}</version>
+		</dependency>
+	</dependencies>
+...
++---
+
+  If we want to package an artifact we have to declare it as a dependency, <<hiapp-web>> is our Spring Boot
+  web app.
+
++---
+...
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>be.hobbiton.maven</groupId>
+				<artifactId>linux-packaging-maven-plugin</artifactId>
+				<extensions>true</extensions>
+...
++---
+
+  <<Extensions>> should be enabled for the plugin to kick in. Without it the <<deb>> type lifecycle would 
+  not be picked up by maven.
+
++---
+...
+				<configuration>
+					<artifacts>
+						<artifact>
+							<groupId>be.hobbiton.app</groupId>
+							<artifactId>hiapp-web</artifactId>
+							<destination>/opt/hiapp/hiapp.jar</destination>
+						</artifact>
+					</artifacts>
+...
++---
+
+  The <<hiapp-web>> artifact is installed in the <<</opt/hiapp/>>> folder with hiapp.jar as it's file name.
+
++---
+...
+					<folders>
+						<folder>
+							<path>/var/log/hiapp</path>
+							<username>hiapp</username>
+						</folder>
+					</folders>
+...
++---
+
+  The <</var/log/hiapp>> folder owned by the <<hiapp>> user must be created by the package.
+
++---
+...
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+</project>
++---
+
+* Result
+
+  The resulting Debian package:
+  
++---
+$ dpkg-deb -I hiapp-1.0.0-20151019011349.deb 
+ new debian package, version 2.0.
+ size 320672 bytes: control archive=507 bytes.
+     227 bytes,     6 lines      control              
+     280 bytes,    17 lines      preinst             #!/bin/sh
+ Package: hiapp
+ Version: 1.0.0-20151019011349
+ Architecture: all
+ Maintainer: Sam <sam@hobbiton.be>
+ Description: Cloud hi server
+  Cloud hi server - Non Secure Implementation
++---  
+
+  The fields in the package are derived from the standard pom field where sensible.
+
++---
+$ dpkg-deb -c hiapp-1.0.0-20151019011349.deb 
+drwxr-xr-x root/root         0 2015-10-19 01:13 ./etc/
+drwxr-xr-x root/root         0 2015-10-19 01:13 ./etc/init/
+-rw-r--r-- root/root       421 2015-10-19 01:13 ./etc/init/hiapp.conf
+drwxr-xr-x root/root         0 2015-10-19 01:13 ./opt/
+drwxr-xr-x root/root         0 2015-10-19 01:13 ./opt/hiapp/
+-rw-r--r-- root/root    378787 2015-10-19 01:13 ./opt/hiapp/hiapp.jar
+drwxr-xr-x root/root         0 2015-10-19 01:13 ./var/
+drwxr-xr-x root/root         0 2015-10-19 01:13 ./var/log/
+drwxr-xr-x hiapp/root        0 2015-10-19 01:13 ./var/log/hiapp/
++---
+
+  The usernames, groups and permissions are all defaults except for the username of 
+  the owner of the <<</var/log/hiapp>>> folder.
+
+* preinst
+
+  The <<preinst>> Debain maintainer script that creates the <<hiapp>> user contains:
+  
++---
+#!/bin/sh
+set -e
+
+USER='hiapp'
+HOMEBASEDIR='/opt'
+
+case "$1" in
+  install)
+
+  # Add user if it doesn't already exists
+  if ! getent passwd ${USER} >/dev/null 2>&1
+  then
+	useradd -r -U -m -b /opt -s /bin/bash ${USER}
+  fi
+esac
+
+exit 0
++---
+  
+* Upstart file
+
+  The upstart file example:
+
++---
+description     "Say Hi server"
+
+start on runlevel [2345]
+stop on runlevel [!2345]
+
+respawn
+respawn limit 10 5
+umask 022
+
+console none
+
+pre-start script
+    test -f /opt/hiapp/hiapp.jar || { stop; exit 0; }
+end script
+
+script
+    su hiapp -c "java -jar /opt/hiapp/hiapp.jar"
+end script
++---
