@@ -234,10 +234,12 @@ public class DebianPackageMojo extends AbstractMojo {
         }
         if (this.folders != null && this.folders.length > 0) {
             for (FolderEntry folder : this.folders) {
-                if (StringUtils.isNotBlank(folder.getPath())) {
+                if (folder.isValid()) {
                     DirectoryArchiveEntry parentFolder = new DirectoryArchiveEntry(folder.getPath(),
                             folder.getUsername(), folder.getGroupname(), getMode(folder.getMode(), folder.getPath()));
                     dataFilesCollector.add(parentFolder);
+                } else {
+                    throw new MojoFailureException("Invalid folder specification " + folder.toString());
                 }
             }
         }

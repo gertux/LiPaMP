@@ -1,5 +1,7 @@
 package be.hobbiton.maven.lipamp.plugin;
 
+import org.codehaus.plexus.util.StringUtils;
+
 public class FolderEntry {
     private String path;
     private String username;
@@ -48,5 +50,14 @@ public class FolderEntry {
 
     public void setMode(String mode) {
         this.mode = mode;
+    }
+
+    public boolean isValid() {
+        return StringUtils.isNotBlank(this.path);
+    }
+
+    @Override
+    public String toString() {
+        return String.format("path=%s u=%s g=%s m=%s", this.path, this.username, this.groupname, this.mode);
     }
 }

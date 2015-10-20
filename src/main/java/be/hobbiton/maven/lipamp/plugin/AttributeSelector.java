@@ -58,6 +58,7 @@ public class AttributeSelector {
 
     @Override
     public String toString() {
-        return String.format("path=%s u=%s g=%s m=%s", this.expression, this.username, this.groupname, this.mode);
+        return String.format("path expression=%s u=%s g=%s m=%s", this.expression, this.username, this.groupname,
+                this.mode);
     }
 }
