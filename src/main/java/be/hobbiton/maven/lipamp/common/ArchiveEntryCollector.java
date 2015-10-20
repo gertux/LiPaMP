@@ -4,8 +4,8 @@ import java.io.File;
 import java.util.Collection;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.regex.Pattern;
 
+import org.codehaus.plexus.util.SelectorUtils;
 import org.codehaus.plexus.util.StringUtils;
 
 import be.hobbiton.maven.lipamp.common.ArchiveEntry.ArchiveEntryType;
@@ -24,6 +24,9 @@ public class ArchiveEntryCollector {
     private Map<String, ArchiveEntry> entries = new TreeMap<String, ArchiveEntry>();
 
     public void add(ArchiveEntry entry) {
+        if (!entry.isValid()) {
+            throw new IllegalArgumentException("Invalid entry: " + entry);
+        }
         entry.setName(cleanPath(entry.getName(), entry.getType()));
         mergeEntries(this.entries.get(entry.getName()), entry);
         addParent(new File(entry.getName()));
@@ -78,8 +81,20 @@ public class ArchiveEntryCollector {
         return newPath;
     }
 
-    public void applyAttributes(Pattern matcher, String username, String groupname, int mode) {
-
+    public void applyAttributes(String pattern, String username, String groupname, int mode) {
+        for (ArchiveEntry entry : this.entries.values()) {
+            if (SelectorUtils.matchPath(pattern, entry.getName())) {
+                if (StringUtils.isNotBlank(username)) {
+                    entry.setUserName(username);
+                }
+                if (StringUtils.isNotBlank(groupname)) {
+                    entry.setGroupName(groupname);
+                }
+                if (mode > ArchiveEntry.INVALID_MODE) {
+                    entry.setMode(mode);
+                }
+            }
+        }
     }
 
     public Collection<ArchiveEntry> getEntries() {

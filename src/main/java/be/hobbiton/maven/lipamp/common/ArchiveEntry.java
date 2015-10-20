@@ -2,6 +2,8 @@ package be.hobbiton.maven.lipamp.common;
 
 import java.io.File;
 
+import org.codehaus.plexus.util.StringUtils;
+
 public class ArchiveEntry {
     public static int INVALID_MODE;
     private String name;
@@ -65,8 +67,12 @@ public class ArchiveEntry {
         F, D, L, S
     }
 
+    public boolean isValid() {
+        return StringUtils.isNotBlank(this.name);
+    }
+
     @Override
     public String toString() {
-        return String.format("%s %04o %8s/%-8s %s\n", getType(), getMode(), getUserName(), getGroupName(), getName());
+        return String.format("%s %04o %8s/%-8s %s", getType(), getMode(), getUserName(), getGroupName(), getName());
     }
 }

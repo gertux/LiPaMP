@@ -1,7 +1,7 @@
 package be.hobbiton.maven.lipamp.common;
 
 import static be.hobbiton.maven.lipamp.common.ArchiveEntryCollector.*;
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 import java.io.File;
 import java.util.Collection;
@@ -20,6 +20,7 @@ public class ArchiveEntryCollectorTest {
     private static final String LEAF_GROUP = "higroup";
     private static final int LEAF_MODE = Integer.parseInt("0400", 8);
     private static final File LEAF_FILE = new File("src/test/data/src/main/deb/etc/init/hiapp.conf");
+    private static final File MISSING_FILE = new File("src/test/missing-file");
     private ArchiveEntryCollector collector;
 
     @Before
@@ -33,30 +34,53 @@ public class ArchiveEntryCollectorTest {
         Collection<ArchiveEntry> entries = this.collector.getEntries();
         assertEquals(4, entries.size());
         Iterator<ArchiveEntry> iterator = entries.iterator();
-        ArchiveEntry l0 = iterator.next();
-        assertEquals("/", l0.getName());
-        assertEquals(DEFAULT_USERNAME, l0.getUserName());
-        assertEquals(DEFAULT_GROUPNAME, l0.getGroupName());
-        assertEquals(DEFAULT_DIRMODE_VALUE, l0.getMode());
-        assertEquals(ArchiveEntryType.D, l0.getType());
-        ArchiveEntry l1 = iterator.next();
-        assertEquals("/etc/", l1.getName());
-        assertEquals(DEFAULT_USERNAME, l1.getUserName());
-        assertEquals(DEFAULT_GROUPNAME, l1.getGroupName());
-        assertEquals(DEFAULT_DIRMODE_VALUE, l1.getMode());
-        assertEquals(ArchiveEntryType.D, l1.getType());
-        ArchiveEntry l2 = iterator.next();
-        assertEquals("/etc/init/", l2.getName());
-        assertEquals(DEFAULT_USERNAME, l2.getUserName());
-        assertEquals(DEFAULT_GROUPNAME, l2.getGroupName());
-        assertEquals(DEFAULT_DIRMODE_VALUE, l2.getMode());
-        assertEquals(ArchiveEntryType.D, l2.getType());
-        ArchiveEntry l3 = iterator.next();
-        assertEquals("/etc/init/app.conf", l3.getName());
-        assertEquals(LEAF_USER, l3.getUserName());
-        assertEquals(LEAF_GROUP, l3.getGroupName());
-        assertEquals(LEAF_MODE, l3.getMode());
-        assertEquals(ArchiveEntryType.F, l3.getType());
+        assertDefaultFolder(iterator.next(), "/");
+        assertDefaultFolder(iterator.next(), "/etc/");
+        assertDefaultFolder(iterator.next(), "/etc/init/");
+        assertLeafFile(iterator.next(), "/etc/init/app.conf");
+
+        this.collector.applyAttributes("/**", LEAF_USER, LEAF_GROUP, LEAF_MODE);
+        assertEquals(4, entries.size());
+        Iterator<ArchiveEntry> afterAttsIterator = entries.iterator();
+        assertLeafFolder(afterAttsIterator.next(), "/");
+        assertLeafFolder(afterAttsIterator.next(), "/etc/");
+        assertLeafFolder(afterAttsIterator.next(), "/etc/init/");
+        assertLeafFile(afterAttsIterator.next(), "/etc/init/app.conf");
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testAddLeafFileMissing() {
+        assertFalse(MISSING_FILE.isFile());
+        this.collector.add(new FileArchiveEntry("/etc/init/app.conf", MISSING_FILE, LEAF_USER, LEAF_GROUP, LEAF_MODE));
+    }
+
+    @Test
+    public void testAddLeafFileNoAtts() {
+        this.collector
+        .add(new FileArchiveEntry("/etc/init/app.conf", LEAF_FILE, null, null, ArchiveEntry.INVALID_MODE));
+        Collection<ArchiveEntry> entries = this.collector.getEntries();
+        assertEquals(4, entries.size());
+        Iterator<ArchiveEntry> iterator = entries.iterator();
+        assertDefaultFolder(iterator.next(), "/");
+        assertDefaultFolder(iterator.next(), "/etc/");
+        assertDefaultFolder(iterator.next(), "/etc/init/");
+        assertDefaultFile(iterator.next(), "/etc/init/app.conf");
+
+        this.collector.applyAttributes("%regex[.+[a-c]*/$]", LEAF_USER, LEAF_GROUP, LEAF_MODE);
+        assertEquals(4, entries.size());
+        Iterator<ArchiveEntry> afterREAttsIterator = entries.iterator();
+        assertDefaultFolder(afterREAttsIterator.next(), "/");
+        assertLeafFolder(afterREAttsIterator.next(), "/etc/");
+        assertLeafFolder(afterREAttsIterator.next(), "/etc/init/");
+        assertDefaultFile(afterREAttsIterator.next(), "/etc/init/app.conf");
+
+        this.collector.applyAttributes("/**/app.conf", LEAF_USER, LEAF_GROUP, LEAF_MODE);
+        assertEquals(4, entries.size());
+        Iterator<ArchiveEntry> afterAttsIterator = entries.iterator();
+        assertDefaultFolder(afterAttsIterator.next(), "/");
+        assertLeafFolder(afterAttsIterator.next(), "/etc/");
+        assertLeafFolder(afterAttsIterator.next(), "/etc/init/");
+        assertLeafFile(afterAttsIterator.next(), "/etc/init/app.conf");
     }
 
     @Test
@@ -65,30 +89,10 @@ public class ArchiveEntryCollectorTest {
         Collection<ArchiveEntry> entries = this.collector.getEntries();
         assertEquals(4, entries.size());
         Iterator<ArchiveEntry> iterator = entries.iterator();
-        ArchiveEntry l0 = iterator.next();
-        assertEquals("/", l0.getName());
-        assertEquals(DEFAULT_USERNAME, l0.getUserName());
-        assertEquals(DEFAULT_GROUPNAME, l0.getGroupName());
-        assertEquals(DEFAULT_DIRMODE_VALUE, l0.getMode());
-        assertEquals(ArchiveEntryType.D, l0.getType());
-        ArchiveEntry l1 = iterator.next();
-        assertEquals("/etc/", l1.getName());
-        assertEquals(DEFAULT_USERNAME, l1.getUserName());
-        assertEquals(DEFAULT_GROUPNAME, l1.getGroupName());
-        assertEquals(DEFAULT_DIRMODE_VALUE, l1.getMode());
-        assertEquals(ArchiveEntryType.D, l1.getType());
-        ArchiveEntry l2 = iterator.next();
-        assertEquals("/etc/init/", l2.getName());
-        assertEquals(DEFAULT_USERNAME, l2.getUserName());
-        assertEquals(DEFAULT_GROUPNAME, l2.getGroupName());
-        assertEquals(DEFAULT_DIRMODE_VALUE, l2.getMode());
-        assertEquals(ArchiveEntryType.D, l2.getType());
-        ArchiveEntry l3 = iterator.next();
-        assertEquals("/etc/init/app.conf", l3.getName());
-        assertEquals(LEAF_USER, l3.getUserName());
-        assertEquals(LEAF_GROUP, l3.getGroupName());
-        assertEquals(LEAF_MODE, l3.getMode());
-        assertEquals(ArchiveEntryType.F, l3.getType());
+        assertDefaultFolder(iterator.next(), "/");
+        assertDefaultFolder(iterator.next(), "/etc/");
+        assertDefaultFolder(iterator.next(), "/etc/init/");
+        assertLeafFile(iterator.next(), "/etc/init/app.conf");
     }
 
     @Test
@@ -97,53 +101,31 @@ public class ArchiveEntryCollectorTest {
         Collection<ArchiveEntry> entries = this.collector.getEntries();
         assertEquals(3, entries.size());
         Iterator<ArchiveEntry> iterator = entries.iterator();
-        ArchiveEntry l0 = iterator.next();
-        assertEquals("/", l0.getName());
-        assertEquals(DEFAULT_USERNAME, l0.getUserName());
-        assertEquals(DEFAULT_GROUPNAME, l0.getGroupName());
-        assertEquals(DEFAULT_DIRMODE_VALUE, l0.getMode());
-        assertEquals(ArchiveEntryType.D, l0.getType());
-        ArchiveEntry l1 = iterator.next();
-        assertEquals("/etc/", l1.getName());
-        assertEquals(DEFAULT_USERNAME, l1.getUserName());
-        assertEquals(DEFAULT_GROUPNAME, l1.getGroupName());
-        assertEquals(DEFAULT_DIRMODE_VALUE, l1.getMode());
-        assertEquals(ArchiveEntryType.D, l1.getType());
-        ArchiveEntry l2 = iterator.next();
-        assertEquals("/etc/init/", l2.getName());
-        assertEquals(LEAF_USER, l2.getUserName());
-        assertEquals(LEAF_GROUP, l2.getGroupName());
-        assertEquals(LEAF_MODE, l2.getMode());
-        assertEquals(ArchiveEntryType.D, l2.getType());
+        assertDefaultFolder(iterator.next(), "/");
+        assertDefaultFolder(iterator.next(), "/etc/");
+        assertLeafFolder(iterator.next(), "/etc/init/");
+    }
+
+    @Test
+    public void testAddLeafDirNoAtts() {
+        this.collector.add(new DirectoryArchiveEntry("/etc/init", null, null, -2));
+        Collection<ArchiveEntry> entries = this.collector.getEntries();
+        assertEquals(3, entries.size());
+        Iterator<ArchiveEntry> iterator = entries.iterator();
+        assertDefaultFolder(iterator.next(), "/");
+        assertDefaultFolder(iterator.next(), "/etc/");
+        assertDefaultFolder(iterator.next(), "/etc/init/");
     }
 
     @Test
     public void testAddLeafDirDot() {
         this.collector.add(new DirectoryArchiveEntry("./etc/init", LEAF_USER, LEAF_GROUP, LEAF_MODE));
         Collection<ArchiveEntry> entries = this.collector.getEntries();
-        for (ArchiveEntry entry : entries) {
-            LOGGER.debug(entry.toString());
-        }
         assertEquals(3, entries.size());
         Iterator<ArchiveEntry> iterator = entries.iterator();
-        ArchiveEntry l0 = iterator.next();
-        assertEquals("/", l0.getName());
-        assertEquals(DEFAULT_USERNAME, l0.getUserName());
-        assertEquals(DEFAULT_GROUPNAME, l0.getGroupName());
-        assertEquals(DEFAULT_DIRMODE_VALUE, l0.getMode());
-        assertEquals(ArchiveEntryType.D, l0.getType());
-        ArchiveEntry l1 = iterator.next();
-        assertEquals("/etc/", l1.getName());
-        assertEquals(DEFAULT_USERNAME, l1.getUserName());
-        assertEquals(DEFAULT_GROUPNAME, l1.getGroupName());
-        assertEquals(DEFAULT_DIRMODE_VALUE, l1.getMode());
-        assertEquals(ArchiveEntryType.D, l1.getType());
-        ArchiveEntry l2 = iterator.next();
-        assertEquals("/etc/init/", l2.getName());
-        assertEquals(LEAF_USER, l2.getUserName());
-        assertEquals(LEAF_GROUP, l2.getGroupName());
-        assertEquals(LEAF_MODE, l2.getMode());
-        assertEquals(ArchiveEntryType.D, l2.getType());
+        assertDefaultFolder(iterator.next(), "/");
+        assertDefaultFolder(iterator.next(), "/etc/");
+        assertLeafFolder(iterator.next(), "/etc/init/");
     }
 
     @Test
@@ -153,35 +135,36 @@ public class ArchiveEntryCollectorTest {
         Collection<ArchiveEntry> entries = this.collector.getEntries();
         assertEquals(4, entries.size());
         Iterator<ArchiveEntry> iterator = entries.iterator();
-        ArchiveEntry l0 = iterator.next();
-        assertEquals("/", l0.getName());
-        assertEquals(DEFAULT_USERNAME, l0.getUserName());
-        assertEquals(DEFAULT_GROUPNAME, l0.getGroupName());
-        assertEquals(DEFAULT_DIRMODE_VALUE, l0.getMode());
-        assertEquals(ArchiveEntryType.D, l0.getType());
-        ArchiveEntry l1 = iterator.next();
-        assertEquals("/etc/", l1.getName());
-        assertEquals(DEFAULT_USERNAME, l1.getUserName());
-        assertEquals(DEFAULT_GROUPNAME, l1.getGroupName());
-        assertEquals(DEFAULT_DIRMODE_VALUE, l1.getMode());
-        assertEquals(ArchiveEntryType.D, l1.getType());
-        ArchiveEntry l2 = iterator.next();
-        assertEquals("/etc/init/", l2.getName());
-        assertEquals(LEAF_USER, l2.getUserName());
-        assertEquals(LEAF_GROUP, l2.getGroupName());
-        assertEquals(LEAF_MODE, l2.getMode());
-        assertEquals(ArchiveEntryType.D, l2.getType());
-        ArchiveEntry l3 = iterator.next();
-        assertEquals("/etc/init/app.conf", l3.getName());
-        assertEquals(LEAF_USER, l3.getUserName());
-        assertEquals(LEAF_GROUP, l3.getGroupName());
-        assertEquals(LEAF_MODE, l3.getMode());
-        assertEquals(ArchiveEntryType.F, l3.getType());
+        assertDefaultFolder(iterator.next(), "/");
+        assertDefaultFolder(iterator.next(), "/etc/");
+        assertLeafFolder(iterator.next(), "/etc/init/");
+        assertLeafFile(iterator.next(), "/etc/init/app.conf");
     }
 
-    // @Test
-    // public void testApplyAttributes() {
-    // fail("Not yet implemented");
-    // }
+    private void assertArchiveEntry(ArchiveEntry entry, String path, String username, String groupname, int mode,
+            ArchiveEntryType type) {
+        LOGGER.debug(entry.toString());
+        assertEquals(path, entry.getName());
+        assertEquals(username, entry.getUserName());
+        assertEquals(groupname, entry.getGroupName());
+        assertEquals(mode, entry.getMode());
+        assertEquals(type, entry.getType());
+    }
 
+    private void assertDefaultFolder(ArchiveEntry entry, String path) {
+        assertArchiveEntry(entry, path, DEFAULT_USERNAME, DEFAULT_GROUPNAME, DEFAULT_DIRMODE_VALUE, ArchiveEntryType.D);
+    }
+
+    private void assertDefaultFile(ArchiveEntry entry, String path) {
+        assertArchiveEntry(entry, path, DEFAULT_USERNAME, DEFAULT_GROUPNAME, DEFAULT_FILEMODE_VALUE,
+                ArchiveEntryType.F);
+    }
+
+    private void assertLeafFolder(ArchiveEntry entry, String path) {
+        assertArchiveEntry(entry, path, LEAF_USER, LEAF_GROUP, LEAF_MODE, ArchiveEntryType.D);
+    }
+
+    private void assertLeafFile(ArchiveEntry entry, String path) {
+        assertArchiveEntry(entry, path, LEAF_USER, LEAF_GROUP, LEAF_MODE, ArchiveEntryType.F);
+    }
 }

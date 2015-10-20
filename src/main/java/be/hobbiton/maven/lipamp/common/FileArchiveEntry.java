@@ -8,4 +8,8 @@ public class FileArchiveEntry extends ArchiveEntry {
         super(name, file, userName, groupName, mode, ArchiveEntryType.F);
     }
 
+    @Override
+    public boolean isValid() {
+        return super.isValid() && (getFile() != null && getFile().isFile());
+    }
 }

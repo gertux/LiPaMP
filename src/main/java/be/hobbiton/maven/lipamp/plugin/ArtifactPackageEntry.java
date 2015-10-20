@@ -90,10 +90,7 @@ public class ArtifactPackageEntry implements Comparable<Artifact> {
 
     @Override
     public String toString() {
-        if (isValid()) {
-            return String.format("%s:%s:%s", this.groupId, this.artifactId, this.type);
-        }
-        return super.toString();
+        return String.format("%s:%s:%s", this.groupId, this.artifactId, this.type);
     }
 
     public boolean isValid() {

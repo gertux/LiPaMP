@@ -181,7 +181,7 @@ public class DebInfo {
         }
         sb.append("\nData files:\n");
         for (ArchiveEntry dataFile : getDataFiles()) {
-            sb.append(dataFile);
+            sb.append(dataFile).append(LINEFEED);
         }
         return sb.toString();
     }

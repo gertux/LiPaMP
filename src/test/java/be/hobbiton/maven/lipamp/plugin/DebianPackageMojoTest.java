@@ -117,6 +117,27 @@ public class DebianPackageMojoTest {
         LOGGER.debug(debianInfo.toString());
         assertEquals(3, debianInfo.getControlFiles().size());
         assertEquals(6, debianInfo.getDataFiles().size());
+        assertInPackage(debianInfo, CONFIG_FOLDERPATH, DEFAULT_USERNAME, DEFAULT_GROUPNAME, DEFAULT_DIRMODE_VALUE);
+        assertEquals(FILE_PACKAGENAME, debianInfo.getControl().getPackageName());
+        assertEquals(FILE_VERSION, debianInfo.getControl().getVersion());
+        assertEquals(FILE_ARCHITECTURE, debianInfo.getControl().getArchitecture());
+        assertEquals(FILE_MAINTAINER, debianInfo.getControl().getMaintainer());
+        assertEquals(FILE_DESCR_SYNOPSIS, debianInfo.getControl().getDescriptionSynopsis());
+        assertEquals(FILE_DESCRIPTION, debianInfo.getControl().getDescription());
+    }
+
+    @Test
+    public void testExecuteWithAtts() throws Exception {
+        AttributeSelector[] attributeSelectors = new AttributeSelector[] {
+                new AttributeSelector("/**", ART_USER, ART_GROUP, CONFIGMODE) };
+        this.project.setFile(PROJECT_FILE);
+        this.mojo.setAttributes(attributeSelectors);
+        this.mojo.execute();
+        DebInfo debianInfo = new DebInfo(PACKAGE_FILE);
+        LOGGER.debug(debianInfo.toString());
+        assertEquals(3, debianInfo.getControlFiles().size());
+        assertEquals(6, debianInfo.getDataFiles().size());
+        assertInPackage(debianInfo, CONFIG_FOLDERPATH, ART_USER, ART_GROUP, CONFIGMODE_VALUE);
         assertEquals(FILE_PACKAGENAME, debianInfo.getControl().getPackageName());
         assertEquals(FILE_VERSION, debianInfo.getControl().getVersion());
         assertEquals(FILE_ARCHITECTURE, debianInfo.getControl().getArchitecture());

@@ -35,6 +35,7 @@ import be.hobbiton.maven.lipamp.deb.DebianPackage;
  * <p>
  * Binds to the package lifecycle phase for artifacts of type deb
  *
+ * @since 1.0.0
  */
 @Mojo(name = "makedeb", requiresProject = true, requiresDependencyResolution = ResolutionScope.COMPILE)
 public class DebianPackageMojo extends AbstractMojo {
@@ -45,18 +46,24 @@ public class DebianPackageMojo extends AbstractMojo {
 
     /**
      * The maven project
+     *
+     * @since 1.0.0
      */
     @Parameter(required = true, defaultValue = "${project}")
     private MavenProject project;
 
     /**
      * The username to use for files and folders when there's no explicit username set
+     *
+     * @since 1.0.0
      */
     @Parameter(defaultValue = DEFAULT_USERNAME)
     private String defaultUsername;
 
     /**
      * The group name to use for files and folders when there's no explicit group name set
+     *
+     * @since 1.0.0
      */
     @Parameter(defaultValue = DEFAULT_GROUPNAME)
     private String defaultGroupname;
@@ -70,6 +77,8 @@ public class DebianPackageMojo extends AbstractMojo {
 
     /**
      * The mode to use for folders when there's no explicit mode set. Specified using octal notation.
+     *
+     * @since 1.0.0
      */
     @Parameter(defaultValue = DEFAULT_DIRMODE)
     private String defaultDirectoryMode;
@@ -77,24 +86,40 @@ public class DebianPackageMojo extends AbstractMojo {
 
     /**
      * The dependent artifacts that should be packaged.
+     *
+     * @since 1.0.0
      */
     @Parameter
     private ArtifactPackageEntry[] artifacts;
 
     /**
      * The folders that should be created and packaged.
+     *
+     * @since 1.0.0
      */
     @Parameter
     private FolderEntry[] folders;
 
     /**
+     * Change file and folder attributes using an Ant or Regex style file matcher
+     *
+     * @since 1.0.0
+     */
+    @Parameter
+    private AttributeSelector[] attributes;
+
+    /**
      * The short description
+     *
+     * @since 1.0.0
      */
     @Parameter(defaultValue = "${project.name}")
     private String descriptionSynopsis;
 
     /**
      * The extended description
+     *
+     * @since 1.0.0
      */
     @Parameter(defaultValue = "${project.description}")
     private String description;
@@ -102,6 +127,8 @@ public class DebianPackageMojo extends AbstractMojo {
     /**
      * The maintainer information, if not specified the first developer from the developer list is used or when that
      * fails the value of the user.name system property
+     *
+     * @since 1.0.0
      */
     @Parameter
     private String maintainer;
@@ -121,7 +148,9 @@ public class DebianPackageMojo extends AbstractMojo {
     }
 
     protected File getPackageFile() throws MojoExecutionException {
-        return new File(getValidOutputDir(), this.project.getArtifactId() + "-" + getVersion() + ".deb");
+        File packageFile = new File(getValidOutputDir(), this.project.getArtifactId() + "-" + getVersion() + ".deb");
+        getLog().info("Writing Debian package file to: " + packageFile.getAbsolutePath());
+        return packageFile;
     }
 
     protected String getVersion() {
@@ -209,6 +238,17 @@ public class DebianPackageMojo extends AbstractMojo {
                     DirectoryArchiveEntry parentFolder = new DirectoryArchiveEntry(folder.getPath(),
                             folder.getUsername(), folder.getGroupname(), getMode(folder.getMode(), folder.getPath()));
                     dataFilesCollector.add(parentFolder);
+                }
+            }
+        }
+        if (this.attributes != null && this.attributes.length > 0) {
+            for (AttributeSelector attributeSelector : this.attributes) {
+                if (attributeSelector.isValid()) {
+                    dataFilesCollector.applyAttributes(attributeSelector.getExpression(),
+                            attributeSelector.getUsername(), attributeSelector.getGroupname(),
+                            getMode(attributeSelector.getMode(), attributeSelector.getExpression()));
+                } else {
+                    throw new MojoFailureException("Invalid attributes specification " + attributeSelector.toString());
                 }
             }
         }
@@ -369,5 +409,9 @@ public class DebianPackageMojo extends AbstractMojo {
 
     protected void setFolders(FolderEntry[] folders) {
         this.folders = folders;
+    }
+
+    protected void setAttributes(AttributeSelector[] attributes) {
+        this.attributes = attributes;
     }
 }
