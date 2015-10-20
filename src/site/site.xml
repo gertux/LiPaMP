@@ -14,7 +14,7 @@
 
 		<menu name="Project Documentation">
 			<item name="Project Information" href="project-info.html" />
-			<item name="Project Information" href="project-reports.html" />
+			<item name="Project Reports" href="project-reports.html" />
 		</menu>
 	</body>
 	<skin>

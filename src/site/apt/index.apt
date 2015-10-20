@@ -18,3 +18,5 @@ Introduction
   moment only the DEB (Debian, Ubuntu) format is implemented.
 
   You can get started by reading the {{{./usage.html}Usage page}} and the {{{./plugin-info.html}Goals page}}.
+  
+  There's also an {{{./example-debian.html}example page}} available.

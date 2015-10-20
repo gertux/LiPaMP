@@ -34,3 +34,25 @@ Usage
 	</plugins>
 </build>  
 +---
+
+** Control file field values
+
+  When there's no Debian control file available in the DEBIAN folder, a control file will be generated 
+  based on the values in following table.
+
+*---------------+----------------------+----------------------+
+ <<Field name>> | <<config parameter>> | <<default value>> 
+*---------------+----------------------+----------------------+
+ Package        | none (yet)           | $\{project.artifactId\}
+*---------------+----------------------+----------------------+
+ Version        | none (yet)           | $\{project.version\}, for SNAPSHOT versions, SNAPSHOT is replaced with a timestamp
+*---------------+----------------------+----------------------+
+ Architecture   | none (yet)           | all
+*---------------+----------------------+----------------------+
+ Maintainer     | maintainer           | the first developer from the developer list or else the user.name system property
+*---------------+----------------------+----------------------+
+ Description    | descriptionSynopsis  | $\{project.name\}
+*---------------+----------------------+----------------------+
+                | description          | $\{project.description\}
+*---------------+----------------------+----------------------+
+  

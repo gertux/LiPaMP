@@ -95,7 +95,7 @@ public class ArtifactPackageEntry implements Comparable<Artifact> {
 
     public boolean isValid() {
         return (StringUtils.isNotBlank(this.artifactId)) && (StringUtils.isNotBlank(this.groupId))
-                && (StringUtils.isNotBlank(this.type));
+                && (StringUtils.isNotBlank(this.type)) && (StringUtils.isNotBlank(this.destination));
     }
 
     @Override

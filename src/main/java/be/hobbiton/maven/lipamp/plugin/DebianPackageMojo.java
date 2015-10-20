@@ -87,6 +87,19 @@ public class DebianPackageMojo extends AbstractMojo {
     /**
      * The dependent artifacts that should be packaged.
      *
+     * <pre>
+     * &lt;artifacts>
+     *   &lt;artifact>
+     *     &lt;groupId>be.hobbiton.app</groupId>
+     *     &lt;artifactId>hiapp</artifactId>
+     *     &lt;type>war</type>
+     *     &lt;destination>/opt/hiapp/</destination>
+     *   &lt;/artifact>
+     * &lt;/artifacts>
+     * </pre>
+     *
+     * type is optional, default value = jar
+     *
      * @since 1.0.0
      */
     @Parameter
@@ -95,6 +108,21 @@ public class DebianPackageMojo extends AbstractMojo {
     /**
      * The folders that should be created and packaged.
      *
+     * <pre>
+     * &lt;folders>
+     *   &lt;folder>
+     *     &lt;path>/var/log/hiapp/</path>
+     *     &lt;username>hiuser</username>
+     *     &lt;groupname>wheel</groupname>
+     *     &lt;mode>0700</mode>
+     *   &lt;/folder>
+     * &lt;/folders>
+     * </pre>
+     *
+     * username is optional, default value = root<br>
+     * groupname is optional, default value = root<br>
+     * mode is optional, default value = 0755
+     *
      * @since 1.0.0
      */
     @Parameter
@@ -102,6 +130,22 @@ public class DebianPackageMojo extends AbstractMojo {
 
     /**
      * Change file and folder attributes using an Ant or Regex style file matcher
+     *
+     * <pre>
+     * &lt;folders>
+     *   &lt;folder>
+     *     &lt;expression>/var/log/hiapp/</expression>
+     *     &lt;username>hiuser</username>
+     *     &lt;groupname>wheel</groupname>
+     *     &lt;mode>0700</mode>
+     *   &lt;/folder>
+     * &lt;/folders>
+     * </pre>
+     *
+     * username is optional, default value = root<br>
+     * groupname is optional, default value = root<br>
+     * mode is optional, default value = 0755<br>
+     * one of username, groupname or mode should be specified
      *
      * @since 1.0.0
      */

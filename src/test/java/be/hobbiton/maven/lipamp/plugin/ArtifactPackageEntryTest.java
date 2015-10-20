@@ -10,39 +10,43 @@ import org.junit.Test;
 
 public class ArtifactPackageEntryTest {
     private static final DefaultArtifact DEP_ARTIFACT = new DefaultArtifact(DEP_GROUPID, DEP_ARTIFACTID, DEP_VERSION,
-            DEP_SCOPE, DEP_PACKAGING, null, new DefaultArtifactHandler());
+            DEP_SCOPE, DEP_PACKAGING, DEP_DESTINATION, new DefaultArtifactHandler());
 
     @Test
     public void testIsValid() {
         ArtifactPackageEntry artifactPackageEntry = new ArtifactPackageEntry(DEP_ARTIFACTID, DEP_GROUPID, DEP_PACKAGING,
-                null, null, null, null);
+                DEP_DESTINATION, null, null, null);
         assertTrue(artifactPackageEntry.isValid());
     }
 
     @Test
     public void testIsValidDefaultPackage() {
-        ArtifactPackageEntry artifactPackageEntry = new ArtifactPackageEntry(DEP_ARTIFACTID, DEP_GROUPID, null, null,
+        ArtifactPackageEntry artifactPackageEntry = new ArtifactPackageEntry(DEP_ARTIFACTID, DEP_GROUPID, null,
+                DEP_DESTINATION,
                 null, null, null);
         assertTrue(artifactPackageEntry.isValid());
     }
 
     @Test
     public void testIsValidEmptyGroupId() {
-        ArtifactPackageEntry artifactPackageEntry = new ArtifactPackageEntry(DEP_ARTIFACTID, "", DEP_PACKAGING, null,
+        ArtifactPackageEntry artifactPackageEntry = new ArtifactPackageEntry(DEP_ARTIFACTID, "", DEP_PACKAGING,
+                DEP_DESTINATION,
                 null, null, null);
         assertFalse(artifactPackageEntry.isValid());
     }
 
     @Test
     public void testIsValidNullGroupId() {
-        ArtifactPackageEntry artifactPackageEntry = new ArtifactPackageEntry(DEP_ARTIFACTID, null, DEP_PACKAGING, null,
+        ArtifactPackageEntry artifactPackageEntry = new ArtifactPackageEntry(DEP_ARTIFACTID, null, DEP_PACKAGING,
+                DEP_DESTINATION,
                 null, null, null);
         assertFalse(artifactPackageEntry.isValid());
     }
 
     @Test
     public void testIsValidEmptyArtifactId() {
-        ArtifactPackageEntry artifactPackageEntry = new ArtifactPackageEntry("", DEP_GROUPID, DEP_PACKAGING, null, null,
+        ArtifactPackageEntry artifactPackageEntry = new ArtifactPackageEntry("", DEP_GROUPID, DEP_PACKAGING, null,
+                DEP_DESTINATION,
                 null, null);
         assertFalse(artifactPackageEntry.isValid());
     }
@@ -50,7 +54,7 @@ public class ArtifactPackageEntryTest {
     @Test
     public void testIsValidNullArtifactId() {
         ArtifactPackageEntry artifactPackageEntry = new ArtifactPackageEntry(null, DEP_GROUPID, DEP_PACKAGING, null,
-                null, null, null);
+                DEP_DESTINATION, null, null);
         assertFalse(artifactPackageEntry.isValid());
     }
 
