@@ -9,7 +9,7 @@
 
 	<groupId>be.hobbiton.maven</groupId>
 	<artifactId>linux-packaging-maven-plugin</artifactId>
-	<version>1.0.1-SNAPSHOT</version>
+	<version>1.0.1</version>
 	<packaging>maven-plugin</packaging>
 
 	<name>Linux Packaging Maven Plugin</name>
@@ -37,7 +37,7 @@
 		<connection>scm:git:git@github.com:gertux/LiPaMP.git</connection>
 		<developerConnection>scm:git:git@github.com:gertux/LiPaMP.git</developerConnection>
 		<url>https://github.com/gertux/LiPaMP</url>
-		<tag>HEAD</tag>
+		<tag>lipamp-1.0.1</tag>
 	</scm>
 	
 	<distributionManagement>
