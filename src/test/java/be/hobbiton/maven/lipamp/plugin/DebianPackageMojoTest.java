@@ -16,6 +16,7 @@ import java.util.regex.Pattern;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.DefaultArtifact;
 import org.apache.maven.artifact.handler.DefaultArtifactHandler;
+import org.apache.maven.artifact.versioning.VersionRange;
 import org.apache.maven.model.Build;
 import org.apache.maven.model.Developer;
 import org.apache.maven.model.Model;
@@ -49,6 +50,7 @@ public class DebianPackageMojoTest {
     private static final String ARTIFACTID = "hiapp-pkg";
     private static final String GROUPID = "be.hobbiton.cloud";
     private static final String VERSION = "1.0.0";
+    private static final String PACKAGING = "deb";
     private static final String NAME = "Cloud hi server";
     private static final String DESCRIPTION = "Cloud hi server - Non Secure Implementation";
     private static final File PROJECT_FILE = new File("src/test/data/pom.xml");
@@ -69,6 +71,7 @@ public class DebianPackageMojoTest {
     private Build build;
     private MavenProject project;
     private DebianPackageMojo mojo;
+    private Artifact artifact;
 
     static {
         Developer developer = new Developer();
@@ -85,10 +88,13 @@ public class DebianPackageMojoTest {
         this.model.setArtifactId(ARTIFACTID);
         this.model.setGroupId(GROUPID);
         this.model.setVersion(VERSION);
+        this.project = new MavenProject(this.model);
         this.build = new Build();
         this.build.setDirectory(OUTPUT_DIR.getAbsolutePath());
-        this.project = new MavenProject(this.model);
         this.project.setBuild(this.build);
+        this.artifact = new DefaultArtifact(GROUPID, ARTIFACTID, VersionRange.createFromVersion(VERSION), null,
+                PACKAGING, null, new DefaultArtifactHandler(), false);
+        this.project.setArtifact(this.artifact);
         this.mojo = new DebianPackageMojo();
         this.mojo.setLog(new Slf4jLogImpl());
         this.mojo.setProject(this.project);
@@ -113,7 +119,7 @@ public class DebianPackageMojoTest {
     public void testExecuteDefault() throws Exception {
         this.project.setFile(PROJECT_FILE);
         this.mojo.execute();
-        DebInfo debianInfo = new DebInfo(PACKAGE_FILE);
+        DebInfo debianInfo = new DebInfo(this.project.getArtifact().getFile());
         LOGGER.debug(debianInfo.toString());
         assertEquals(3, debianInfo.getControlFiles().size());
         assertEquals(6, debianInfo.getDataFiles().size());
@@ -133,7 +139,7 @@ public class DebianPackageMojoTest {
         this.project.setFile(PROJECT_FILE);
         this.mojo.setAttributes(attributeSelectors);
         this.mojo.execute();
-        DebInfo debianInfo = new DebInfo(PACKAGE_FILE);
+        DebInfo debianInfo = new DebInfo(this.project.getArtifact().getFile());
         LOGGER.debug(debianInfo.toString());
         assertEquals(3, debianInfo.getControlFiles().size());
         assertEquals(6, debianInfo.getDataFiles().size());
@@ -151,7 +157,7 @@ public class DebianPackageMojoTest {
         this.project.setFile(PROJECT_FILE);
         this.mojo.setFolders(FOLDERS);
         this.mojo.execute();
-        DebInfo debianInfo = new DebInfo(PACKAGE_FILE);
+        DebInfo debianInfo = new DebInfo(this.project.getArtifact().getFile());
         LOGGER.debug(debianInfo.toString());
         assertEquals(3, debianInfo.getControlFiles().size());
         assertEquals(9, debianInfo.getDataFiles().size());
@@ -177,7 +183,7 @@ public class DebianPackageMojoTest {
         this.project.setDependencyArtifacts(deps);
         this.mojo.setArtifacts(ARTIFACTS);
         this.mojo.execute();
-        DebInfo debianInfo = new DebInfo(PACKAGE_FILE);
+        DebInfo debianInfo = new DebInfo(this.project.getArtifact().getFile());
         LOGGER.debug(debianInfo.toString());
         assertEquals(3, debianInfo.getControlFiles().size());
         assertEquals(12, debianInfo.getDataFiles().size());
@@ -198,7 +204,7 @@ public class DebianPackageMojoTest {
         this.project.setDependencyArtifacts(deps);
         this.mojo.setArtifacts(ARTIFACTS);
         this.mojo.execute();
-        DebInfo debianInfo = new DebInfo(PACKAGE_FILE);
+        DebInfo debianInfo = new DebInfo(this.project.getArtifact().getFile());
         LOGGER.debug(debianInfo.toString());
         assertEquals(3, debianInfo.getControlFiles().size());
         assertEquals(9, debianInfo.getDataFiles().size());
@@ -236,7 +242,7 @@ public class DebianPackageMojoTest {
         this.project.setFile(PROJECT_FILE);
         this.mojo.setFolders(new FolderEntry[] { new FolderEntry(CONFIG_FOLDERNAME, CONFIGUSER, CONFIGGROUP, null) });
         this.mojo.execute();
-        DebInfo debianInfo = new DebInfo(PACKAGE_FILE);
+        DebInfo debianInfo = new DebInfo(this.project.getArtifact().getFile());
         LOGGER.debug(debianInfo.toString());
         assertEquals(3, debianInfo.getControlFiles().size());
         assertEquals(6, debianInfo.getDataFiles().size());
@@ -254,7 +260,7 @@ public class DebianPackageMojoTest {
         this.project.setFile(PROJECT_FILE);
         this.mojo.setFolders(new FolderEntry[] { new FolderEntry(CONFIG_FOLDERNAME + "/", null, null, CONFIGMODE) });
         this.mojo.execute();
-        DebInfo debianInfo = new DebInfo(PACKAGE_FILE);
+        DebInfo debianInfo = new DebInfo(this.project.getArtifact().getFile());
         LOGGER.debug(debianInfo.toString());
         assertEquals(3, debianInfo.getControlFiles().size());
         assertEquals(6, debianInfo.getDataFiles().size());
@@ -275,7 +281,7 @@ public class DebianPackageMojoTest {
         assertTrue(new File(copiedSrc, "main/deb/DEBIAN/control").delete());
         this.project.setFile(copiedSrc);
         this.mojo.execute();
-        DebInfo debianInfo = new DebInfo(PACKAGE_FILE);
+        DebInfo debianInfo = new DebInfo(this.project.getArtifact().getFile());
         assertEquals(3, debianInfo.getControlFiles().size());
         assertEquals(6, debianInfo.getDataFiles().size());
         assertEquals(ARTIFACTID, debianInfo.getControl().getPackageName());

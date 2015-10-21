@@ -45,11 +45,9 @@ public class DebianPackageMojo extends AbstractMojo {
     protected static final String SNAPSHOT_SUFFIX = "-SNAPSHOT";
 
     /**
-     * The maven project
-     *
-     * @since 1.0.0
+     * The Maven project
      */
-    @Parameter(required = true, defaultValue = "${project}")
+    @Parameter(required = true, readonly = true, defaultValue = "${project}")
     private MavenProject project;
 
     /**
@@ -184,8 +182,10 @@ public class DebianPackageMojo extends AbstractMojo {
             ArchiveEntryCollector dataFilesCollector = new ArchiveEntryCollector();
             List<File> controlFiles = new ArrayList<File>();
             findFiles(packageBasedir, dataFilesCollector, controlFiles);
+            File packageFile = getPackageFile();
             DebianPackage debianPackage = new DebianPackage(controlFiles, dataFilesCollector.getEntries());
-            debianPackage.write(getPackageFile());
+            debianPackage.write(packageFile);
+            this.project.getArtifact().setFile(packageFile);
         } else {
             throw new MojoFailureException("Missing package base directory");
         }
