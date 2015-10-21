@@ -51,6 +51,12 @@ public class DebianPackageMojo extends AbstractMojo {
     private MavenProject project;
 
     /**
+     * Name of the generated JAR.
+     */
+    @Parameter(defaultValue = "${project.build.finalName}")
+    private String finalName;
+
+    /**
      * The username to use for files and folders when there's no explicit username set
      *
      * @since 1.0.0
@@ -192,7 +198,7 @@ public class DebianPackageMojo extends AbstractMojo {
     }
 
     protected File getPackageFile() throws MojoExecutionException {
-        File packageFile = new File(getValidOutputDir(), this.project.getArtifactId() + "-" + getVersion() + ".deb");
+        File packageFile = new File(getValidOutputDir(), this.finalName + ".deb");
         getLog().info("Writing Debian package file to: " + packageFile.getAbsolutePath());
         return packageFile;
     }
@@ -421,6 +427,9 @@ public class DebianPackageMojo extends AbstractMojo {
         this.project = project;
     }
 
+    protected void setFinalName(String finalName) {
+        this.finalName = finalName;
+    }
     protected void setDefaultUsername(String defaultUsername) {
         this.defaultUsername = defaultUsername;
     }

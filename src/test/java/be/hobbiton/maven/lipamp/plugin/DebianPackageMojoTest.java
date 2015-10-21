@@ -16,6 +16,8 @@ import java.util.regex.Pattern;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.DefaultArtifact;
 import org.apache.maven.artifact.handler.DefaultArtifactHandler;
+import org.apache.maven.artifact.repository.layout.ArtifactRepositoryLayout;
+import org.apache.maven.artifact.repository.layout.DefaultRepositoryLayout;
 import org.apache.maven.artifact.versioning.VersionRange;
 import org.apache.maven.model.Build;
 import org.apache.maven.model.Developer;
@@ -55,7 +57,9 @@ public class DebianPackageMojoTest {
     private static final String DESCRIPTION = "Cloud hi server - Non Secure Implementation";
     private static final File PROJECT_FILE = new File("src/test/data/pom.xml");
     private static final File OUTPUT_DIR = new File("target/DebianPackageMojoTest");
-    private static final File PACKAGE_FILE = new File(OUTPUT_DIR, ARTIFACTID + "-" + VERSION + ".deb");
+    private static final String PACKAGE_FINALNAME = ARTIFACTID + "-" + VERSION;
+    private static final String PACKAGE_FINAL_FILENAME = ARTIFACTID + "-" + VERSION + ".deb";
+    private static final File PACKAGE_FILE = new File(OUTPUT_DIR, PACKAGE_FINAL_FILENAME);
     private static final String SYSTEM_USERNAME = "myusername";
     private static final List<Developer> DEVELOPERS = new ArrayList<Developer>();
     private static final FolderEntry[] FOLDERS = new FolderEntry[] {
@@ -66,7 +70,7 @@ public class DebianPackageMojoTest {
     private static final ArtifactPackageEntry[] ARTIFACTS = new ArtifactPackageEntry[] { new ArtifactPackageEntry(
             DEP_ARTIFACTID, DEP_GROUPID, DEP_PACKAGING, DEP_DESTINATION, ART_USER, ART_GROUP, CONFIGMODE) };
     private static final DefaultArtifact DEP_ARTIFACT = new DefaultArtifact(DEP_GROUPID, DEP_ARTIFACTID, DEP_VERSION,
-            "compile", DEP_PACKAGING, null, new DefaultArtifactHandler());
+            "compile", DEP_PACKAGING, null, new DefaultArtifactHandler(DEP_PACKAGING));
     private Model model;
     private Build build;
     private MavenProject project;
@@ -98,6 +102,7 @@ public class DebianPackageMojoTest {
         this.mojo = new DebianPackageMojo();
         this.mojo.setLog(new Slf4jLogImpl());
         this.mojo.setProject(this.project);
+        this.mojo.setFinalName(PACKAGE_FINALNAME);
         this.mojo.setDefaultUsername(DEFAULT_USERNAME);
         this.mojo.setDefaultGroupname(DEFAULT_GROUPNAME);
         this.mojo.setDefaultDirectoryMode(DEFAULT_DIRMODE);
@@ -117,9 +122,13 @@ public class DebianPackageMojoTest {
 
     @Test
     public void testExecuteDefault() throws Exception {
+        ArtifactRepositoryLayout layout = new DefaultRepositoryLayout();
+        LOGGER.debug("PATH = {}", layout.pathOf(DEP_ARTIFACT));
         this.project.setFile(PROJECT_FILE);
         this.mojo.execute();
-        DebInfo debianInfo = new DebInfo(this.project.getArtifact().getFile());
+        File artifactFile = this.project.getArtifact().getFile();
+        assertEquals(PACKAGE_FINAL_FILENAME, artifactFile.getName());
+        DebInfo debianInfo = new DebInfo(artifactFile);
         LOGGER.debug(debianInfo.toString());
         assertEquals(3, debianInfo.getControlFiles().size());
         assertEquals(6, debianInfo.getDataFiles().size());
@@ -311,21 +320,6 @@ public class DebianPackageMojoTest {
         LOGGER.debug(pkgVersion);
         Matcher versionMatcher = versionPattern.matcher(pkgVersion);
         assertTrue("No match for " + pkgVersion, versionMatcher.matches());
-    }
-
-    @Test
-    public void testGetPackageFile() throws Exception {
-        assertEquals(PACKAGE_FILE.getAbsolutePath(), this.mojo.getPackageFile().getAbsolutePath());
-    }
-
-    @Test
-    public void testGetSnapshotPackageFile() throws Exception {
-        this.project.setVersion(VERSION + SNAPSHOT_SUFFIX);
-        String pkgFilename = this.mojo.getPackageFile().getAbsolutePath();
-        Pattern pkgFilenamePattern = Pattern.compile(".*/" + ARTIFACTID + "-" + VERSION + "-20[0-9]{12}\\.deb");
-        LOGGER.debug(pkgFilename);
-        Matcher pkgFilenameMatcher = pkgFilenamePattern.matcher(pkgFilename);
-        assertTrue("No match for " + pkgFilename, pkgFilenameMatcher.matches());
     }
 
     @Test
