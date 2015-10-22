@@ -22,6 +22,7 @@ public class ArchiveEntryCollector {
     private int defaultFilemode = DEFAULT_FILEMODE_VALUE;
     private int defaultDirmode = DEFAULT_DIRMODE_VALUE;
     private Map<String, ArchiveEntry> entries = new TreeMap<String, ArchiveEntry>();
+    private long installedSize = 0;
 
     public void add(ArchiveEntry entry) {
         if (!entry.isValid()) {
@@ -64,6 +65,9 @@ public class ArchiveEntryCollector {
                         (newEntry.getType().equals(ArchiveEntryType.D)) ? this.defaultDirmode : this.defaultFilemode);
             }
             this.entries.put(newEntry.getName(), newEntry);
+            if (newEntry.getFile() != null && newEntry.getFile().isFile()) {
+                this.installedSize += newEntry.getFile().length();
+            }
         }
     }
 
@@ -115,5 +119,9 @@ public class ArchiveEntryCollector {
 
     public void setDefaultDirmode(int defaultDirmode) {
         this.defaultDirmode = (defaultDirmode > ArchiveEntry.INVALID_MODE) ? defaultDirmode : DEFAULT_DIRMODE_VALUE;
+    }
+
+    public long getInstalledSize() {
+        return this.installedSize;
     }
 }

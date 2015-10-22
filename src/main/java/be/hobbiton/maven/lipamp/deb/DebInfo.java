@@ -162,7 +162,7 @@ public class DebInfo {
         }
         sb.append(DebianControlField.MAINTAINER.getFieldname()).append(": ").append(this.control.getMaintainer())
         .append(LINEFEED);
-        if (StringUtils.isNotBlank(this.control.getInstalledSize())) {
+        if (this.control.getInstalledSize() > DebianControl.INVALID_SIZE) {
             sb.append(DebianControlField.INSTALLED_SIZE.getFieldname()).append(": ")
             .append(this.control.getInstalledSize()).append(LINEFEED);
         }

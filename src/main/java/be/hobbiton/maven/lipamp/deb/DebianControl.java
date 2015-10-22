@@ -17,13 +17,15 @@ import java.util.List;
 import org.codehaus.plexus.util.StringUtils;
 
 public class DebianControl {
+    public static final long INVALID_SIZE = -1L;
     private static final String FOLDED_FORMAT = " %s\n";
     private static final String SIMPLE_FIELD_FORMAT = "%s: %s\n";
+    private static final String DECIMAL_FIELD_FORMAT = "%s: %d\n";
     private String packageName;
     private String section;
     private String priority;
     private String maintainer;
-    private String installedSize;
+    private long installedSize = INVALID_SIZE;
     private String version;
     private String architecture;
     private String descriptionSynopsis;
@@ -65,8 +67,8 @@ public class DebianControl {
                 writer.write(
                         String.format(SIMPLE_FIELD_FORMAT, DebianControlField.PRIORITY.getFieldname(), this.priority));
             }
-            if (StringUtils.isNotBlank(this.installedSize)) {
-                writer.write(String.format(SIMPLE_FIELD_FORMAT, DebianControlField.INSTALLED_SIZE.getFieldname(),
+            if (this.installedSize > INVALID_SIZE) {
+                writer.write(String.format(DECIMAL_FIELD_FORMAT, DebianControlField.INSTALLED_SIZE.getFieldname(),
                         this.installedSize));
             }
             if (StringUtils.isNotBlank(this.depends)) {
@@ -164,7 +166,7 @@ public class DebianControl {
                 break;
 
             case INSTALLED_SIZE:
-                setInstalledSize(values.get(0));
+                setInstalledSize(getLongValue(values.get(0)));
                 break;
 
             case VERSION:
@@ -182,6 +184,14 @@ public class DebianControl {
             default:
                 break;
             }
+        }
+    }
+
+    public long getLongValue(String strValue) {
+        try {
+            return Long.parseLong(strValue);
+        } catch (NumberFormatException e) {
+            return INVALID_SIZE;
         }
     }
 
@@ -217,11 +227,11 @@ public class DebianControl {
         this.maintainer = maintainer;
     }
 
-    public String getInstalledSize() {
+    public long getInstalledSize() {
         return this.installedSize;
     }
 
-    public void setInstalledSize(String installedSize) {
+    public void setInstalledSize(long installedSize) {
         this.installedSize = installedSize;
     }
 

@@ -38,6 +38,7 @@ public class ArchiveEntryCollectorTest {
         assertDefaultFolder(iterator.next(), "/etc/");
         assertDefaultFolder(iterator.next(), "/etc/init/");
         assertLeafFile(iterator.next(), "/etc/init/app.conf");
+        assertEquals(353, this.collector.getInstalledSize());
 
         this.collector.applyAttributes("/**", LEAF_USER, LEAF_GROUP, LEAF_MODE);
         assertEquals(4, entries.size());
@@ -65,6 +66,7 @@ public class ArchiveEntryCollectorTest {
         assertDefaultFolder(iterator.next(), "/etc/");
         assertDefaultFolder(iterator.next(), "/etc/init/");
         assertDefaultFile(iterator.next(), "/etc/init/app.conf");
+        assertEquals(353, this.collector.getInstalledSize());
 
         this.collector.applyAttributes("%regex[.+[a-c]*/$]", LEAF_USER, LEAF_GROUP, LEAF_MODE);
         assertEquals(4, entries.size());
@@ -93,6 +95,7 @@ public class ArchiveEntryCollectorTest {
         assertDefaultFolder(iterator.next(), "/etc/");
         assertDefaultFolder(iterator.next(), "/etc/init/");
         assertLeafFile(iterator.next(), "/etc/init/app.conf");
+        assertEquals(353, this.collector.getInstalledSize());
     }
 
     @Test
@@ -104,6 +107,7 @@ public class ArchiveEntryCollectorTest {
         assertDefaultFolder(iterator.next(), "/");
         assertDefaultFolder(iterator.next(), "/etc/");
         assertLeafFolder(iterator.next(), "/etc/init/");
+        assertEquals(0, this.collector.getInstalledSize());
     }
 
     @Test
@@ -115,6 +119,7 @@ public class ArchiveEntryCollectorTest {
         assertDefaultFolder(iterator.next(), "/");
         assertDefaultFolder(iterator.next(), "/etc/");
         assertDefaultFolder(iterator.next(), "/etc/init/");
+        assertEquals(0, this.collector.getInstalledSize());
     }
 
     @Test
@@ -126,6 +131,7 @@ public class ArchiveEntryCollectorTest {
         assertDefaultFolder(iterator.next(), "/");
         assertDefaultFolder(iterator.next(), "/etc/");
         assertLeafFolder(iterator.next(), "/etc/init/");
+        assertEquals(0, this.collector.getInstalledSize());
     }
 
     @Test
@@ -139,6 +145,7 @@ public class ArchiveEntryCollectorTest {
         assertDefaultFolder(iterator.next(), "/etc/");
         assertLeafFolder(iterator.next(), "/etc/init/");
         assertLeafFile(iterator.next(), "/etc/init/app.conf");
+        assertEquals(353, this.collector.getInstalledSize());
     }
 
     private void assertArchiveEntry(ArchiveEntry entry, String path, String username, String groupname, int mode,

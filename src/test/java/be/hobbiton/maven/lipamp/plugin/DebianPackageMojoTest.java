@@ -139,6 +139,7 @@ public class DebianPackageMojoTest {
         assertEquals(FILE_MAINTAINER, debianInfo.getControl().getMaintainer());
         assertEquals(FILE_DESCR_SYNOPSIS, debianInfo.getControl().getDescriptionSynopsis());
         assertEquals(FILE_DESCRIPTION, debianInfo.getControl().getDescription());
+        assertEquals(0, debianInfo.getControl().getInstalledSize());
     }
 
     @Test
@@ -159,6 +160,7 @@ public class DebianPackageMojoTest {
         assertEquals(FILE_MAINTAINER, debianInfo.getControl().getMaintainer());
         assertEquals(FILE_DESCR_SYNOPSIS, debianInfo.getControl().getDescriptionSynopsis());
         assertEquals(FILE_DESCRIPTION, debianInfo.getControl().getDescription());
+        assertEquals(0, debianInfo.getControl().getInstalledSize());
     }
 
     @Test
@@ -176,6 +178,7 @@ public class DebianPackageMojoTest {
         assertEquals(FILE_MAINTAINER, debianInfo.getControl().getMaintainer());
         assertEquals(FILE_DESCR_SYNOPSIS, debianInfo.getControl().getDescriptionSynopsis());
         assertEquals(FILE_DESCRIPTION, debianInfo.getControl().getDescription());
+        assertEquals(0, debianInfo.getControl().getInstalledSize());
     }
 
     @Test
@@ -203,6 +206,7 @@ public class DebianPackageMojoTest {
         assertEquals(MODEL_MAINTAINER, debianInfo.getControl().getMaintainer());
         assertEquals(NAME, debianInfo.getControl().getDescriptionSynopsis());
         assertEquals(DESCRIPTION, debianInfo.getControl().getDescription());
+        assertEquals(3, debianInfo.getControl().getInstalledSize());
     }
 
     @Test
@@ -224,6 +228,7 @@ public class DebianPackageMojoTest {
         assertEquals(FILE_MAINTAINER, debianInfo.getControl().getMaintainer());
         assertEquals(FILE_DESCR_SYNOPSIS, debianInfo.getControl().getDescriptionSynopsis());
         assertEquals(FILE_DESCRIPTION, debianInfo.getControl().getDescription());
+        assertEquals(0, debianInfo.getControl().getInstalledSize());
     }
 
     @Test(expected = MojoFailureException.class)
@@ -262,6 +267,7 @@ public class DebianPackageMojoTest {
         assertEquals(FILE_MAINTAINER, debianInfo.getControl().getMaintainer());
         assertEquals(FILE_DESCR_SYNOPSIS, debianInfo.getControl().getDescriptionSynopsis());
         assertEquals(FILE_DESCRIPTION, debianInfo.getControl().getDescription());
+        assertEquals(0, debianInfo.getControl().getInstalledSize());
     }
 
     @Test
@@ -280,6 +286,7 @@ public class DebianPackageMojoTest {
         assertEquals(FILE_MAINTAINER, debianInfo.getControl().getMaintainer());
         assertEquals(FILE_DESCR_SYNOPSIS, debianInfo.getControl().getDescriptionSynopsis());
         assertEquals(FILE_DESCRIPTION, debianInfo.getControl().getDescription());
+        assertEquals(0, debianInfo.getControl().getInstalledSize());
     }
 
     @Test
@@ -299,6 +306,7 @@ public class DebianPackageMojoTest {
         assertEquals(SYSTEM_USERNAME, debianInfo.getControl().getMaintainer());
         assertEquals(NAME, debianInfo.getControl().getDescriptionSynopsis());
         assertEquals(DESCRIPTION, debianInfo.getControl().getDescription());
+        assertEquals(1, debianInfo.getControl().getInstalledSize());
     }
 
     @Test(expected = MojoFailureException.class)
@@ -338,6 +346,13 @@ public class DebianPackageMojoTest {
         this.model.setDevelopers(DEVELOPERS);
         this.mojo.setMaintainer(EXPLICIT_MAINTAINER);
         assertEquals(EXPLICIT_MAINTAINER, this.mojo.getMaintainer());
+    }
+
+    @Test
+    public void testGetSizeKB() {
+        assertEquals(1, this.mojo.getSizeKB(1024));
+        assertEquals(1, this.mojo.getSizeKB(102));
+        assertEquals(2, this.mojo.getSizeKB(1025));
     }
 
     private void assertInPackage(DebInfo debianInfo, String name, String username, String groupname, int mode) {

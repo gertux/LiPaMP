@@ -256,9 +256,6 @@ public class DebianPackageMojo extends AbstractMojo {
                 addDataFile(dataFilesCollector, file, "/");
             }
         }
-        if (!haveControl) {
-            controlFiles.add(generateControlFile());
-        }
         if (this.artifacts != null && this.artifacts.length > 0) {
             for (ArtifactPackageEntry artifactEntry : this.artifacts) {
                 if (StringUtils.isNotBlank(artifactEntry.getDestination())) {
@@ -304,6 +301,9 @@ public class DebianPackageMojo extends AbstractMojo {
                 }
             }
         }
+        if (!haveControl) {
+            controlFiles.add(generateControlFile(dataFilesCollector.getInstalledSize()));
+        }
     }
 
     private Artifact getDependentArtifact(ArtifactPackageEntry artifactEntry) throws MojoFailureException {
@@ -347,7 +347,7 @@ public class DebianPackageMojo extends AbstractMojo {
         }
     }
 
-    private File generateControlFile() throws MojoExecutionException {
+    private File generateControlFile(long installedSize) throws MojoExecutionException {
         DebianControl control = new DebianControl();
         control.setPackageName(this.project.getArtifactId());
         control.setVersion(getVersion());
@@ -355,6 +355,7 @@ public class DebianPackageMojo extends AbstractMojo {
         control.setMaintainer(getMaintainer());
         control.setDescriptionSynopsis(this.descriptionSynopsis);
         control.setDescription(this.description);
+        control.setInstalledSize(getSizeKB(installedSize));
         File controlFile = new File(getValidOutputDir(), "control");
         FileOutputStream fos = null;
         try {
@@ -372,6 +373,10 @@ public class DebianPackageMojo extends AbstractMojo {
             }
         }
         return controlFile;
+    }
+
+    protected long getSizeKB(long sizeByte) {
+        return sizeByte / 1024 + (((sizeByte % 1024) > 0) ? 1 : 0);
     }
 
     private File getValidOutputDir() throws MojoExecutionException {

@@ -61,7 +61,7 @@ public class DebianControlTest {
         assertNull(control.getSection());
         assertNull(control.getPriority());
         assertEquals(FILE_MAINTAINER, control.getMaintainer());
-        assertNull(control.getInstalledSize());
+        assertEquals(DebianControl.INVALID_SIZE, control.getInstalledSize());
         assertEquals(FILE_VERSION, control.getVersion());
         assertEquals(FILE_DESCR_SYNOPSIS, control.getDescriptionSynopsis());
         assertEquals(FILE_DESCRIPTION, control.getDescription());
