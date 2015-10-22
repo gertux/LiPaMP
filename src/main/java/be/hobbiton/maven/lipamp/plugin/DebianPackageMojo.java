@@ -52,9 +52,43 @@ public class DebianPackageMojo extends AbstractMojo {
 
     /**
      * Name of the generated JAR.
+     *
+     * @since 1.0.1
      */
     @Parameter(defaultValue = "${project.build.finalName}")
     private String finalName;
+
+    /**
+     * The application's homepage
+     *
+     * @since 1.1.0
+     */
+    @Parameter(defaultValue = "${project.url}")
+    private String homepage;
+
+    /**
+     * The application's section
+     *
+     * @since 1.1.0
+     */
+    @Parameter
+    private String section;
+
+    /**
+     * The application's priority
+     *
+     * @since 1.1.0
+     */
+    @Parameter
+    private String priority;
+
+    /**
+     * The application's dependencies
+     *
+     * @since 1.1.0
+     */
+    @Parameter
+    private String depends;
 
     /**
      * The username to use for files and folders when there's no explicit username set
@@ -356,6 +390,10 @@ public class DebianPackageMojo extends AbstractMojo {
         control.setDescriptionSynopsis(this.descriptionSynopsis);
         control.setDescription(this.description);
         control.setInstalledSize(getSizeKB(installedSize));
+        control.setDepends(this.depends);
+        control.setHomepage(this.homepage);
+        control.setSection(this.section);
+        control.setPriority(this.priority);
         File controlFile = new File(getValidOutputDir(), "control");
         FileOutputStream fos = null;
         try {
@@ -473,5 +511,21 @@ public class DebianPackageMojo extends AbstractMojo {
 
     protected void setAttributes(AttributeSelector[] attributes) {
         this.attributes = attributes;
+    }
+
+    protected void setHomepage(String homepage) {
+        this.homepage = homepage;
+    }
+
+    protected void setSection(String section) {
+        this.section = section;
+    }
+
+    protected void setPriority(String priority) {
+        this.priority = priority;
+    }
+
+    protected void setDepends(String depends) {
+        this.depends = depends;
     }
 }

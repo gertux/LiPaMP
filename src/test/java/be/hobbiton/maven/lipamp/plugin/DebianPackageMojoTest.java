@@ -55,6 +55,10 @@ public class DebianPackageMojoTest {
     private static final String PACKAGING = "deb";
     private static final String NAME = "Cloud hi server";
     private static final String DESCRIPTION = "Cloud hi server - Non Secure Implementation";
+    private static final String DEPENDS = "jdk, tomcat";
+    private static final String URL = "http://hi.home.com";
+    private static final String SECTION = "Java";
+    private static final String PRIORITY = "optional";
     private static final File PROJECT_FILE = new File("src/test/data/pom.xml");
     private static final File OUTPUT_DIR = new File("target/DebianPackageMojoTest");
     private static final String PACKAGE_FINALNAME = ARTIFACTID + "-" + VERSION;
@@ -194,6 +198,10 @@ public class DebianPackageMojoTest {
         deps.add(DEP_ARTIFACT);
         this.project.setDependencyArtifacts(deps);
         this.mojo.setArtifacts(ARTIFACTS);
+        this.mojo.setHomepage(URL);
+        this.mojo.setSection(SECTION);
+        this.mojo.setPriority(PRIORITY);
+        this.mojo.setDepends(DEPENDS);
         this.mojo.execute();
         DebInfo debianInfo = new DebInfo(this.project.getArtifact().getFile());
         LOGGER.debug(debianInfo.toString());
@@ -207,6 +215,10 @@ public class DebianPackageMojoTest {
         assertEquals(NAME, debianInfo.getControl().getDescriptionSynopsis());
         assertEquals(DESCRIPTION, debianInfo.getControl().getDescription());
         assertEquals(3, debianInfo.getControl().getInstalledSize());
+        assertEquals(URL, debianInfo.getControl().getHomepage());
+        assertEquals(SECTION, debianInfo.getControl().getSection());
+        assertEquals(PRIORITY, debianInfo.getControl().getPriority());
+        assertEquals(DEPENDS, debianInfo.getControl().getDepends());
     }
 
     @Test

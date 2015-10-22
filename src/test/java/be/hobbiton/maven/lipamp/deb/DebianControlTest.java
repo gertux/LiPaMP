@@ -14,6 +14,7 @@ import org.junit.Test;
 public class DebianControlTest {
     private static final File OUTPUT_DIR = new File("target/DebianControlTest");
     private static final File NEW_CONTROL_FILE = new File(OUTPUT_DIR, "control");
+    private static final String HOMEPAGE = "http://www.home.com";
 
     @Before
     public void setUp() throws Exception {
@@ -53,6 +54,7 @@ public class DebianControlTest {
         debianControl.setMaintainer(FILE_MAINTAINER);
         debianControl.setDescriptionSynopsis(FILE_DESCR_SYNOPSIS);
         debianControl.setDescription(FILE_DESCRIPTION);
+        debianControl.setHomepage(HOMEPAGE);
         FileOutputStream fos = new FileOutputStream(NEW_CONTROL_FILE);
         debianControl.write(fos);
         fos.close();
@@ -67,6 +69,7 @@ public class DebianControlTest {
         assertEquals(FILE_DESCRIPTION, control.getDescription());
         assertNull(control.getDepends());
         assertEquals(FILE_ARCHITECTURE, control.getArchitecture());
+        assertEquals(HOMEPAGE, control.getHomepage());
     }
 
     @Test

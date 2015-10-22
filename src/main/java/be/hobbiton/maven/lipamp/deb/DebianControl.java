@@ -31,6 +31,7 @@ public class DebianControl {
     private String descriptionSynopsis;
     private String description;
     private String depends;
+    private String homepage;
 
     public DebianControl() {
     }
@@ -74,6 +75,10 @@ public class DebianControl {
             if (StringUtils.isNotBlank(this.depends)) {
                 writer.write(
                         String.format(SIMPLE_FIELD_FORMAT, DebianControlField.DEPENDS.getFieldname(), this.depends));
+            }
+            if (StringUtils.isNotBlank(this.homepage)) {
+                writer.write(
+                        String.format(SIMPLE_FIELD_FORMAT, DebianControlField.HOMEPAGE.getFieldname(), this.homepage));
             }
         } catch (IOException e) {
             throw new DebianArchiveException("Could not write control file", e);
@@ -181,6 +186,10 @@ public class DebianControl {
                 setDepends(values.get(0));
                 break;
 
+            case HOMEPAGE:
+                setHomepage(values.get(0));
+                break;
+
             default:
                 break;
             }
@@ -275,10 +284,18 @@ public class DebianControl {
         this.depends = depends;
     }
 
+    public String getHomepage() {
+        return this.homepage;
+    }
+
+    public void setHomepage(String homepage) {
+        this.homepage = homepage;
+    }
+
     public enum DebianControlField {
         DEPENDS("Depends"), ARCHITECTURE("Architecture"), VERSION("Version"), INSTALLED_SIZE(
                 "Installed-Size"), MAINTAINER("Maintainer"), PRIORITY("Priority"), SECTION("Section"), PACKAGE(
-                        "Package"), DESCRIPTION("Description");
+                        "Package"), DESCRIPTION("Description"), HOMEPAGE("Homepage");
         private final String fieldname;
 
         public final String getFieldname() {
