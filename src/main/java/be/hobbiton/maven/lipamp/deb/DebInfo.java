@@ -1,13 +1,17 @@
 package be.hobbiton.maven.lipamp.deb;
 
 import java.io.BufferedInputStream;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 
 import org.apache.commons.compress.archivers.ArchiveException;
 import org.apache.commons.compress.archivers.ArchiveStreamFactory;
@@ -38,6 +42,7 @@ public class DebInfo {
     private DebianControl control;
     private Collection<File> controlFiles;
     private Collection<ArchiveEntry> dataFiles;
+    private Collection<File> conffiles;
 
     public DebInfo(File packageFile) {
         super();
@@ -56,6 +61,10 @@ public class DebInfo {
         return this.dataFiles;
     }
 
+    public Collection<File> getConffiles() {
+        return this.conffiles;
+    }
+
     private final void readControl(InputStream input) throws DebianArchiveException {
         BufferedInputStream bufInput = null;
         TarArchiveInputStream tar = null;
@@ -69,6 +78,8 @@ public class DebInfo {
                 this.controlFiles.add(new File(tarEntry.getName()));
                 if ("control".equals(tarEntry.getName()) || tarEntry.getName().endsWith("/control")) {
                     this.control = new DebianControl(tar);
+                } else if ("conffiles".equals(tarEntry.getName()) || tarEntry.getName().endsWith("/conffiles")) {
+                    readConffiles(tar);
                 }
                 tarEntry = tar.getNextTarEntry();
             }
@@ -76,6 +87,22 @@ public class DebInfo {
             throw new DebianArchiveException("Unable to read Control Archive", e);
         } catch (IOException e) {
             throw new DebianArchiveException("Unable to read Control Archive entry", e);
+        }
+    }
+
+    private final void readConffiles(InputStream input) {
+        this.conffiles = new HashSet<File>();
+        BufferedReader reader = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8));
+        String line = null;
+        try {
+            while ((line = reader.readLine()) != null) {
+                String path = line.trim();
+                if (StringUtils.isNotBlank(path)) {
+                    this.conffiles.add(new File(path));
+                }
+            }
+        } catch (IOException e) {
+            throw new DebianArchiveException("Unable to read conffiles File", e);
         }
     }
 
@@ -178,6 +205,12 @@ public class DebInfo {
         sb.append("\nControl files:\n");
         for (File controlFile : getControlFiles()) {
             sb.append(controlFile.getName()).append(LINEFEED);
+        }
+        if (this.conffiles != null && !this.conffiles.isEmpty()) {
+            sb.append("\nConfiguration files:\n");
+            for (File configFile : this.conffiles) {
+                sb.append(configFile.getAbsolutePath()).append(LINEFEED);
+            }
         }
         sb.append("\nData files:\n");
         for (ArchiveEntry dataFile : getDataFiles()) {

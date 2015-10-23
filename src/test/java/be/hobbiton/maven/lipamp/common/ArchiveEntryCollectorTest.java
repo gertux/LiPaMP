@@ -40,7 +40,8 @@ public class ArchiveEntryCollectorTest {
         assertLeafFile(iterator.next(), "/etc/init/app.conf");
         assertEquals(353, this.collector.getInstalledSize());
 
-        this.collector.applyAttributes("/**", LEAF_USER, LEAF_GROUP, LEAF_MODE);
+        Collection<File> conffiles = this.collector.applyAttributes("/**", LEAF_USER, LEAF_GROUP, LEAF_MODE, false);
+        assertTrue(conffiles.isEmpty());
         assertEquals(4, entries.size());
         Iterator<ArchiveEntry> afterAttsIterator = entries.iterator();
         assertLeafFolder(afterAttsIterator.next(), "/");
@@ -68,7 +69,9 @@ public class ArchiveEntryCollectorTest {
         assertDefaultFile(iterator.next(), "/etc/init/app.conf");
         assertEquals(353, this.collector.getInstalledSize());
 
-        this.collector.applyAttributes("%regex[.+[a-c]*/$]", LEAF_USER, LEAF_GROUP, LEAF_MODE);
+        Collection<File> conffiles = this.collector.applyAttributes("%regex[.+[a-c]*/$]", LEAF_USER, LEAF_GROUP,
+                LEAF_MODE, false);
+        assertTrue(conffiles.isEmpty());
         assertEquals(4, entries.size());
         Iterator<ArchiveEntry> afterREAttsIterator = entries.iterator();
         assertDefaultFolder(afterREAttsIterator.next(), "/");
@@ -76,7 +79,10 @@ public class ArchiveEntryCollectorTest {
         assertLeafFolder(afterREAttsIterator.next(), "/etc/init/");
         assertDefaultFile(afterREAttsIterator.next(), "/etc/init/app.conf");
 
-        this.collector.applyAttributes("/**/app.conf", LEAF_USER, LEAF_GROUP, LEAF_MODE);
+        Collection<File> conffiles2 = this.collector.applyAttributes("/**/app.conf", LEAF_USER, LEAF_GROUP, LEAF_MODE,
+                true);
+        assertTrue(conffiles.isEmpty());
+        assertEquals(1, conffiles2.size());
         assertEquals(4, entries.size());
         Iterator<ArchiveEntry> afterAttsIterator = entries.iterator();
         assertDefaultFolder(afterAttsIterator.next(), "/");
@@ -96,6 +102,10 @@ public class ArchiveEntryCollectorTest {
         assertDefaultFolder(iterator.next(), "/etc/init/");
         assertLeafFile(iterator.next(), "/etc/init/app.conf");
         assertEquals(353, this.collector.getInstalledSize());
+        Collection<File> conffiles = this.collector.applyAttributes("%regex[^.*$]", null, null,
+                ArchiveEntry.INVALID_MODE, true);
+        assertFalse(conffiles.isEmpty());
+        assertEquals(1, conffiles.size());
     }
 
     @Test

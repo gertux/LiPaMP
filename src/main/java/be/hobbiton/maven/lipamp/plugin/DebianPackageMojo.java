@@ -10,7 +10,9 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.model.Developer;
@@ -51,12 +53,37 @@ public class DebianPackageMojo extends AbstractMojo {
     private MavenProject project;
 
     /**
-     * Name of the generated JAR.
+     * Name of the generated DEB.
      *
      * @since 1.0.1
      */
     @Parameter(defaultValue = "${project.build.finalName}")
     private String finalName;
+
+    /**
+     * The application's Package name
+     *
+     * @since 1.1.0
+     */
+    @Parameter(defaultValue = "${project.artifactId}")
+    private String packageName;
+
+    /**
+     * The application's version, for SNAPSHOT versions, the SNAPSHOT part is replaced with a sortable timestamp to
+     * avoid unexpected upgrade behaviour
+     *
+     * @since 1.1.0
+     */
+    @Parameter(defaultValue = "${project.version}")
+    private String version;
+
+    /**
+     * The application's Architecture
+     *
+     * @since 1.1.0
+     */
+    @Parameter(defaultValue = DEFAULT_ARCHITECTURE)
+    private String architecture;
 
     /**
      * The application's homepage
@@ -172,10 +199,11 @@ public class DebianPackageMojo extends AbstractMojo {
      * <pre>
      * &lt;folders>
      *   &lt;folder>
-     *     &lt;expression>/var/log/hiapp/</expression>
+     *     &lt;expression>/etc/hiapp/*</expression>
      *     &lt;username>hiuser</username>
      *     &lt;groupname>wheel</groupname>
      *     &lt;mode>0700</mode>
+     *     &lt;config>true</config>
      *   &lt;/folder>
      * &lt;/folders>
      * </pre>
@@ -183,9 +211,10 @@ public class DebianPackageMojo extends AbstractMojo {
      * username is optional, default value = root<br>
      * groupname is optional, default value = root<br>
      * mode is optional, default value = 0755<br>
-     * one of username, groupname or mode should be specified
+     * config marks the matching files as conffile, it is optional, default false<br>
+     * one of username, groupname or mode should be specified or config should be true
      *
-     * @since 1.0.0
+     * @since 1.1.0
      */
     @Parameter
     private AttributeSelector[] attributes;
@@ -238,12 +267,12 @@ public class DebianPackageMojo extends AbstractMojo {
     }
 
     protected String getVersion() {
-        if (this.project.getVersion().endsWith(SNAPSHOT_SUFFIX)) {
-            SimpleDateFormat format = new SimpleDateFormat(this.project.getVersion().substring(0,
-                    this.project.getVersion().length() - SNAPSHOT_SUFFIX.length()) + "-yyyyMMddHHmmss");
+        if (this.version.endsWith(SNAPSHOT_SUFFIX)) {
+            SimpleDateFormat format = new SimpleDateFormat(
+                    this.version.substring(0, this.version.length() - SNAPSHOT_SUFFIX.length()) + "-yyyyMMddHHmmss");
             return format.format(new Date());
         }
-        return this.project.getVersion();
+        return this.version;
     }
 
     protected String getMaintainer() {
@@ -276,6 +305,8 @@ public class DebianPackageMojo extends AbstractMojo {
     private void findFiles(File packageBasedir, ArchiveEntryCollector dataFilesCollector, Collection<File> controlFiles)
             throws MojoExecutionException, MojoFailureException {
         boolean haveControl = false;
+        boolean haveConnffiles = false;
+        Set<File> conffiles = new HashSet<File>();
         for (File file : packageBasedir.listFiles()) {
             if ("DEBIAN".equals(file.getName())) {
                 // add control files
@@ -283,6 +314,8 @@ public class DebianPackageMojo extends AbstractMojo {
                     getLog().debug("Adding control " + controlFile.getAbsolutePath());
                     if ("control".equals(controlFile.getName())) {
                         haveControl = true;
+                    } else if ("conffiles".equals(controlFile.getName())) {
+                        haveConnffiles = true;
                     }
                     controlFiles.add(controlFile);
                 }
@@ -327,9 +360,10 @@ public class DebianPackageMojo extends AbstractMojo {
         if (this.attributes != null && this.attributes.length > 0) {
             for (AttributeSelector attributeSelector : this.attributes) {
                 if (attributeSelector.isValid()) {
-                    dataFilesCollector.applyAttributes(attributeSelector.getExpression(),
+                    conffiles.addAll(dataFilesCollector.applyAttributes(attributeSelector.getExpression(),
                             attributeSelector.getUsername(), attributeSelector.getGroupname(),
-                            getMode(attributeSelector.getMode(), attributeSelector.getExpression()));
+                            getMode(attributeSelector.getMode(), attributeSelector.getExpression()),
+                            attributeSelector.isConfig()));
                 } else {
                     throw new MojoFailureException("Invalid attributes specification " + attributeSelector.toString());
                 }
@@ -338,6 +372,38 @@ public class DebianPackageMojo extends AbstractMojo {
         if (!haveControl) {
             controlFiles.add(generateControlFile(dataFilesCollector.getInstalledSize()));
         }
+        if (!haveConnffiles && !conffiles.isEmpty()) {
+            controlFiles.add(generateConnffilesFile(conffiles));
+        }
+    }
+
+    private File generateConnffilesFile(Set<File> conffiles) throws MojoExecutionException {
+        File conffilesFile = new File(getValidOutputDir(), "conffiles");
+        FileOutputStream fos = null;
+        try {
+            fos = new FileOutputStream(conffilesFile);
+            for (File conffile : conffiles) {
+                String path = conffile.getAbsolutePath().trim();
+                if (StringUtils.isNotBlank(path)) {
+                    byte[] pathBytes = path.getBytes();
+                    fos.write(pathBytes);
+                    fos.write('\n');
+                }
+            }
+        } catch (FileNotFoundException e) {
+            throw new MojoExecutionException("Unable to create conffiles file", e);
+        } catch (IOException e) {
+            throw new MojoExecutionException("Unable to write to conffiles file", e);
+        } finally {
+            if (fos != null) {
+                try {
+                    fos.close();
+                } catch (IOException e) {
+                    getLog().error(e);
+                }
+            }
+        }
+        return conffilesFile;
     }
 
     private Artifact getDependentArtifact(ArtifactPackageEntry artifactEntry) throws MojoFailureException {
@@ -383,9 +449,9 @@ public class DebianPackageMojo extends AbstractMojo {
 
     private File generateControlFile(long installedSize) throws MojoExecutionException {
         DebianControl control = new DebianControl();
-        control.setPackageName(this.project.getArtifactId());
+        control.setPackageName(this.packageName);
         control.setVersion(getVersion());
-        control.setArchitecture(DEFAULT_ARCHITECTURE);
+        control.setArchitecture(this.architecture);
         control.setMaintainer(getMaintainer());
         control.setDescriptionSynopsis(this.descriptionSynopsis);
         control.setDescription(this.description);
@@ -473,6 +539,7 @@ public class DebianPackageMojo extends AbstractMojo {
     protected void setFinalName(String finalName) {
         this.finalName = finalName;
     }
+
     protected void setDefaultUsername(String defaultUsername) {
         this.defaultUsername = defaultUsername;
     }
@@ -527,5 +594,17 @@ public class DebianPackageMojo extends AbstractMojo {
 
     protected void setDepends(String depends) {
         this.depends = depends;
+    }
+
+    protected void setPackageName(String packageName) {
+        this.packageName = packageName;
+    }
+
+    protected void setVersion(String version) {
+        this.version = version;
+    }
+
+    protected void setArchitecture(String architecture) {
+        this.architecture = architecture;
     }
 }

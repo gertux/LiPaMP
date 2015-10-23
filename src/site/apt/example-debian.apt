@@ -3,13 +3,13 @@
  ------
  Gert Dewit
  ------
- 2015-10-19
+ 2015-10-23
  ------
  
 Debian example
 
   The example describes a module that packages a Spring Boot web application that is started at 
-  boot time using {{{https://wiki.debian.org/Upstart}Upstart}}.
+  boot time using {{{https://wiki.debian.org/Upstart}Upstart}} and has a config directory in /etc.
   
   The app needs to run as a non privileged user which is created using a postinstall script.
   
@@ -19,11 +19,14 @@ Debian example
 
 +---
   pom.xml
-  +--- src/main/deb
-      +--- DEBIAN
+  +--- src/main/deb/
+      +--- DEBIAN/
       |   +--- preinst
-      +--- etc/init
-          +--- hiapp.conf
+      +--- etc/
+          +--- hiapp/
+          |   +--- hiapp.properties 
+          +--- init/
+              +--- hiapp.conf
 +---
 
   The <<<src/main/deb>>> folder is the starting point for the file system resources. The DEBIAN 
@@ -34,6 +37,9 @@ Debian example
   hiapp.conf and it's parent folders become data archive members using the default username and
   groupname. The permissions for these files and folders are the default file and folder mode 
   respectively.
+  
+  The files in the <<</etc/hiapp>>> folder are marked as config file and are read only for members of the
+  application's group.
   
 * Pom
 
@@ -86,7 +92,7 @@ Debian example
 ...
 +---
 
-  <<Extensions>> should be enabled for the plugin to kick in. Without it the <<deb>> type lifecycle would 
+  <<Extensions>> should be enabled for the plugin to kick in. Without it, the <<deb>> type lifecycle would 
   not be picked up by maven.
 
 +---
@@ -119,6 +125,22 @@ Debian example
 
 +---
 ...
+					<attributes>
+						<attribute>
+							<expression>/etc/hiapp/*</expression>
+							<groupname>hiapp</groupname>
+							<mode>0640</mode>
+							<config>true</config>
+						</attribute>
+					</attributes>
+...
++---
+
+  The files in the <<</etc/hiapp>>> folder are marked as config file and are read only for members of the
+  application's group, the default user (root) has read-write permissions.
+
++---
+...
 				</configuration>
 			</plugin>
 		</plugins>
@@ -131,15 +153,17 @@ Debian example
   The resulting Debian package:
   
 +---
-$ dpkg-deb -I hiapp-1.0.0-20151019011349.deb 
+$ dpkg-deb -I hiapp-1.0.0-SNAPSHOT.deb 
  new debian package, version 2.0.
- size 320672 bytes: control archive=507 bytes.
+ size 320672 bytes: control archive=543 bytes.
+      36 bytes,     1 line       conffiles            
      227 bytes,     6 lines      control              
      280 bytes,    17 lines      preinst             #!/bin/sh
  Package: hiapp
  Version: 1.0.0-20151019011349
  Architecture: all
  Maintainer: Sam <sam@hobbiton.be>
+ Installed-Size: 380
  Description: Cloud hi server
   Cloud hi server - Non Secure Implementation
 +---  
@@ -147,8 +171,10 @@ $ dpkg-deb -I hiapp-1.0.0-20151019011349.deb
   The fields in the package are derived from the standard pom field where sensible.
 
 +---
-$ dpkg-deb -c hiapp-1.0.0-20151019011349.deb 
+$ dpkg-deb -c hiapp-1.0.0-SNAPSHOT.deb 
 drwxr-xr-x root/root         0 2015-10-19 01:13 ./etc/
+drwxr-xr-x root/root         0 2015-10-19 01:13 ./etc/hiapp/
+-rw-r----- root/hiapp       52 2015-10-19 01:13 ./etc/hiapp/hiapp.properties
 drwxr-xr-x root/root         0 2015-10-19 01:13 ./etc/init/
 -rw-r--r-- root/root       421 2015-10-19 01:13 ./etc/init/hiapp.conf
 drwxr-xr-x root/root         0 2015-10-19 01:13 ./opt/
@@ -160,7 +186,8 @@ drwxr-xr-x hiapp/root        0 2015-10-19 01:13 ./var/log/hiapp/
 +---
 
   The usernames, groups and permissions are all defaults except for the username of 
-  the owner of the <<</var/log/hiapp>>> folder.
+  the owner of the <<</var/log/hiapp>>> folder and the group name of the 
+  <<</etc/hiapp/hiapp.properties>>> file.
 
 * preinst
 

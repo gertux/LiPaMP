@@ -7,20 +7,22 @@ public class AttributeSelector {
     private String username;
     private String groupname;
     private String mode;
+    private boolean config = false;
 
     public AttributeSelector() {
     }
 
-    public AttributeSelector(String expression, String username, String groupname, String mode) {
+    public AttributeSelector(String expression, String username, String groupname, String mode, boolean config) {
         super();
         this.expression = expression;
         this.username = username;
         this.groupname = groupname;
         this.mode = mode;
+        this.config = config;
     }
 
     public boolean isValid() {
-        return ((StringUtils.isNotBlank(this.expression)) && (StringUtils.isNotBlank(this.username)
+        return ((StringUtils.isNotBlank(this.expression)) && (this.config || StringUtils.isNotBlank(this.username)
                 || StringUtils.isNotBlank(this.groupname) || StringUtils.isNotBlank(this.mode)));
     }
 
@@ -54,6 +56,14 @@ public class AttributeSelector {
 
     public void setMode(String mode) {
         this.mode = mode;
+    }
+
+    public boolean isConfig() {
+        return this.config;
+    }
+
+    public void setConfig(boolean config) {
+        this.config = config;
     }
 
     @Override

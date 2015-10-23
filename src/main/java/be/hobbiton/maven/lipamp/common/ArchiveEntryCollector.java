@@ -2,7 +2,9 @@ package be.hobbiton.maven.lipamp.common;
 
 import java.io.File;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 import org.codehaus.plexus.util.SelectorUtils;
@@ -85,7 +87,9 @@ public class ArchiveEntryCollector {
         return newPath;
     }
 
-    public void applyAttributes(String pattern, String username, String groupname, int mode) {
+    public Collection<File> applyAttributes(String pattern, String username, String groupname, int mode,
+            boolean conffile) {
+        Set<File> conffiles = new HashSet<File>();
         for (ArchiveEntry entry : this.entries.values()) {
             if (SelectorUtils.matchPath(pattern, entry.getName())) {
                 if (StringUtils.isNotBlank(username)) {
@@ -97,8 +101,12 @@ public class ArchiveEntryCollector {
                 if (mode > ArchiveEntry.INVALID_MODE) {
                     entry.setMode(mode);
                 }
+                if (conffile && ArchiveEntryType.F.equals(entry.getType())) {
+                    conffiles.add(new File(entry.getName()));
+                }
             }
         }
+        return conffiles;
     }
 
     public Collection<ArchiveEntry> getEntries() {

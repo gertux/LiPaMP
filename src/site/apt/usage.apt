@@ -3,7 +3,7 @@
  ------
  Gert Dewit
  ------
- 2015-10-19
+ 2015-10-23
  ------
  
 Usage
@@ -43,11 +43,13 @@ Usage
 *---------------+----------------------+----------------------+
  <<Field name>> | <<config parameter>> | <<default value>> 
 *---------------+----------------------+----------------------+
- Package        | none (yet)           | $\{project.artifactId\}
+ Package        | packageName          | $\{project.artifactId\}
 *---------------+----------------------+----------------------+
- Version        | none (yet)           | $\{project.version\}, for SNAPSHOT versions, SNAPSHOT is replaced with a timestamp
+ Version        | version              | $\{project.version\}, for SNAPSHOT versions, SNAPSHOT is replaced with a timestamp
 *---------------+----------------------+----------------------+
- Architecture   | none (yet)           | all
+ Architecture   | architecture         | all
+*---------------+----------------------+----------------------+
+ Installed-Size | none                 | calculated
 *---------------+----------------------+----------------------+
  Maintainer     | maintainer           | the first developer from the developer list or else the user.name system property
 *---------------+----------------------+----------------------+
@@ -55,4 +57,16 @@ Usage
 *---------------+----------------------+----------------------+
                 | description          | $\{project.description\}
 *---------------+----------------------+----------------------+
-  
+ Homepage       | homepage             | $\{project.url\}
+*---------------+----------------------+----------------------+
+ Section        | section              | 
+*---------------+----------------------+----------------------+
+ Priority       | priority              | 
+*---------------+----------------------+----------------------+
+ Depends        | depends              | 
+*---------------+----------------------+----------------------+
+
+** Config files
+
+ When there is no Debian conffiles file available in the DEBIAN folder and there are files marked as 
+ such using an attribute expression, the conffiles file will be generated.

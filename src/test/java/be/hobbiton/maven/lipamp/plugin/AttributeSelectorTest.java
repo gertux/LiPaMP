@@ -12,25 +12,28 @@ public class AttributeSelectorTest {
 
     @Test
     public void testIsValid() {
-        assertTrue(new AttributeSelector(EXPRESSION, USERNAME, GROUPNAME, MODE).isValid());
-        assertTrue(new AttributeSelector(EXPRESSION, USERNAME, GROUPNAME, null).isValid());
-        assertTrue(new AttributeSelector(EXPRESSION, USERNAME, null, null).isValid());
-        assertTrue(new AttributeSelector(EXPRESSION, null, GROUPNAME, null).isValid());
-        assertTrue(new AttributeSelector(EXPRESSION, null, GROUPNAME, MODE).isValid());
-        assertTrue(new AttributeSelector(EXPRESSION, null, null, MODE).isValid());
-        assertTrue(new AttributeSelector(EXPRESSION, USERNAME, null, MODE).isValid());
+        assertTrue(new AttributeSelector(EXPRESSION, USERNAME, GROUPNAME, MODE, false).isValid());
+        assertTrue(new AttributeSelector(EXPRESSION, USERNAME, GROUPNAME, MODE, true).isValid());
+        assertTrue(new AttributeSelector(EXPRESSION, USERNAME, GROUPNAME, null, false).isValid());
+        assertTrue(new AttributeSelector(EXPRESSION, USERNAME, null, null, true).isValid());
+        assertTrue(new AttributeSelector(EXPRESSION, null, GROUPNAME, null, false).isValid());
+        assertTrue(new AttributeSelector(EXPRESSION, null, GROUPNAME, MODE, true).isValid());
+        assertTrue(new AttributeSelector(EXPRESSION, null, null, MODE, false).isValid());
+        assertTrue(new AttributeSelector(EXPRESSION, USERNAME, null, MODE, true).isValid());
+        assertTrue(new AttributeSelector(EXPRESSION, null, null, null, true).isValid());
     }
 
     @Test
     public void testIsInvalid() {
-        assertFalse(new AttributeSelector(null, null, null, null).isValid());
-        assertFalse(new AttributeSelector(EXPRESSION, null, null, null).isValid());
-        assertFalse(new AttributeSelector(null, USERNAME, null, null).isValid());
-        assertFalse(new AttributeSelector(null, null, GROUPNAME, null).isValid());
-        assertFalse(new AttributeSelector(null, null, null, MODE).isValid());
-        assertFalse(new AttributeSelector(null, null, GROUPNAME, MODE).isValid());
-        assertFalse(new AttributeSelector(null, USERNAME, null, MODE).isValid());
-        assertFalse(new AttributeSelector(null, USERNAME, GROUPNAME, null).isValid());
-        assertFalse(new AttributeSelector(null, USERNAME, GROUPNAME, MODE).isValid());
+        assertFalse(new AttributeSelector(null, null, null, null, true).isValid());
+        assertFalse(new AttributeSelector(EXPRESSION, null, null, null, false).isValid());
+        assertFalse(new AttributeSelector(null, USERNAME, null, null, true).isValid());
+        assertFalse(new AttributeSelector(null, null, GROUPNAME, null, true).isValid());
+        assertFalse(new AttributeSelector(null, null, null, MODE, true).isValid());
+        assertFalse(new AttributeSelector(null, null, GROUPNAME, MODE, true).isValid());
+        assertFalse(new AttributeSelector(null, USERNAME, null, MODE, true).isValid());
+        assertFalse(new AttributeSelector(null, USERNAME, GROUPNAME, null, true).isValid());
+        assertFalse(new AttributeSelector(null, USERNAME, GROUPNAME, MODE, true).isValid());
+        assertFalse(new AttributeSelector(null, USERNAME, GROUPNAME, MODE, true).isValid());
     }
 }
