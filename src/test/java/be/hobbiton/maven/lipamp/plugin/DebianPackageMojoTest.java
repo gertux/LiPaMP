@@ -62,6 +62,7 @@ public class DebianPackageMojoTest {
     private static final String PRIORITY = "optional";
     private static final File PROJECT_FILE = new File("src/test/data/pom.xml");
     private static final File OUTPUT_DIR = new File("target/DebianPackageMojoTest");
+    private static final File RESOURCES_DIR = new File(OUTPUT_DIR, "classes");
     private static final String PACKAGE_FINALNAME = ARTIFACTID + "-" + VERSION;
     private static final String PACKAGE_FINAL_FILENAME = ARTIFACTID + "-" + VERSION + ".deb";
     private static final File PACKAGE_FILE = new File(OUTPUT_DIR, PACKAGE_FINAL_FILENAME);
@@ -93,20 +94,21 @@ public class DebianPackageMojoTest {
     @Before
     public void setUp() throws Exception {
         tearDown();
+        assertTrue(RESOURCES_DIR.mkdirs());
+        FileUtils.copyDirectoryStructure(new File(BASEDIR, "deb"), new File(RESOURCES_DIR, "deb"));
         this.model = new Model();
         this.model.setArtifactId(ARTIFACTID);
         this.model.setGroupId(GROUPID);
         this.model.setVersion(VERSION);
         this.project = new MavenProject(this.model);
-        this.build = new Build();
-        this.build.setDirectory(OUTPUT_DIR.getAbsolutePath());
-        this.project.setBuild(this.build);
         this.artifact = new DefaultArtifact(GROUPID, ARTIFACTID, VersionRange.createFromVersion(VERSION), null,
                 PACKAGING, null, new DefaultArtifactHandler(), false);
         this.project.setArtifact(this.artifact);
         this.mojo = new DebianPackageMojo();
         this.mojo.setLog(new Slf4jLogImpl());
         this.mojo.setProject(this.project);
+        this.mojo.setOutputDirectory(OUTPUT_DIR);
+        this.mojo.setResourcesDirectory(RESOURCES_DIR);
         this.mojo.setFinalName(PACKAGE_FINALNAME);
         this.mojo.setPackageName(ARTIFACTID);
         this.mojo.setDefaultUsername(DEFAULT_USERNAME);
@@ -192,11 +194,7 @@ public class DebianPackageMojoTest {
     @Test
     public void testExecuteFull() throws Exception {
         this.model.setDevelopers(DEVELOPERS);
-        File copiedSrc = new File(OUTPUT_DIR, "src");
-        assertTrue(copiedSrc.mkdirs());
-        FileUtils.copyDirectoryStructure(new File(PROJECT_FILE.getParentFile(), "src"), copiedSrc);
-        assertTrue(new File(copiedSrc, "main/deb/DEBIAN/control").delete());
-        this.project.setFile(copiedSrc);
+        assertTrue(new File(RESOURCES_DIR, "deb/DEBIAN/control").delete());
         this.mojo.setFolders(FOLDERS);
         Set<Artifact> deps = new HashSet<Artifact>();
         deps.add(DEP_ARTIFACT);
@@ -307,11 +305,7 @@ public class DebianPackageMojoTest {
 
     @Test
     public void testExecuteNoControl() throws Exception {
-        File copiedSrc = new File(OUTPUT_DIR, "src");
-        assertTrue(copiedSrc.mkdirs());
-        FileUtils.copyDirectoryStructure(new File(PROJECT_FILE.getParentFile(), "src"), copiedSrc);
-        assertTrue(new File(copiedSrc, "main/deb/DEBIAN/control").delete());
-        this.project.setFile(copiedSrc);
+        assertTrue(new File(RESOURCES_DIR, "deb/DEBIAN/control").delete());
         this.mojo.execute();
         DebInfo debianInfo = new DebInfo(this.project.getArtifact().getFile());
         DebInfoTest.assertControl(debianInfo, new String[] { "conffiles", "control", "postinst" });
@@ -338,11 +332,7 @@ public class DebianPackageMojoTest {
 
     @Test
     public void testExecuteNoControlAllParametersSet() throws Exception {
-        File copiedSrc = new File(OUTPUT_DIR, "src");
-        assertTrue(copiedSrc.mkdirs());
-        FileUtils.copyDirectoryStructure(new File(PROJECT_FILE.getParentFile(), "src"), copiedSrc);
-        assertTrue(new File(copiedSrc, "main/deb/DEBIAN/control").delete());
-        this.project.setFile(copiedSrc);
+        assertTrue(new File(RESOURCES_DIR, "deb/DEBIAN/control").delete());
         this.mojo.setPackageName(CUSTOM_PACKAGENAME);
         this.mojo.setVersion(CUSTOM_VERSION);
         this.mojo.setArchitecture(CUSTOM_ARCHITECTURE);
@@ -372,12 +362,8 @@ public class DebianPackageMojoTest {
 
     @Test
     public void testExecuteNoConfig() throws Exception {
-        File copiedSrc = new File(OUTPUT_DIR, "src");
-        assertTrue(copiedSrc.mkdirs());
-        FileUtils.copyDirectoryStructure(new File(PROJECT_FILE.getParentFile(), "src"), copiedSrc);
-        assertTrue(new File(copiedSrc, "main/deb/DEBIAN/control").delete());
-        assertTrue(new File(copiedSrc, "main/deb/DEBIAN/conffiles").delete());
-        this.project.setFile(copiedSrc);
+        assertTrue(new File(RESOURCES_DIR, "deb/DEBIAN/control").delete());
+        assertTrue(new File(RESOURCES_DIR, "deb/DEBIAN/conffiles").delete());
         this.mojo.execute();
         DebInfo debianInfo = new DebInfo(this.project.getArtifact().getFile());
         DebInfoTest.assertControl(debianInfo, new String[] { "control", "postinst" });
@@ -393,12 +379,8 @@ public class DebianPackageMojoTest {
 
     @Test
     public void testExecuteNoConfigAtt() throws Exception {
-        File copiedSrc = new File(OUTPUT_DIR, "src");
-        assertTrue(copiedSrc.mkdirs());
-        FileUtils.copyDirectoryStructure(new File(PROJECT_FILE.getParentFile(), "src"), copiedSrc);
-        assertTrue(new File(copiedSrc, "main/deb/DEBIAN/control").delete());
-        assertTrue(new File(copiedSrc, "main/deb/DEBIAN/conffiles").delete());
-        this.project.setFile(copiedSrc);
+        assertTrue(new File(RESOURCES_DIR, "deb/DEBIAN/control").delete());
+        assertTrue(new File(RESOURCES_DIR, "deb/DEBIAN/conffiles").delete());
         AttributeSelector[] attributeSelectors = new AttributeSelector[] {
                 new AttributeSelector("/**/*.conf", null, null, null, true) };
         this.mojo.setAttributes(attributeSelectors);
@@ -419,7 +401,7 @@ public class DebianPackageMojoTest {
 
     @Test(expected = MojoFailureException.class)
     public void testNoPackageBasedir() throws Exception {
-        this.project.setFile(new File("src/test/data/src/main/deb"));
+        this.mojo.setResourcesDirectory(new File("src/test/data/src/main/deb"));
         this.mojo.execute();
     }
 

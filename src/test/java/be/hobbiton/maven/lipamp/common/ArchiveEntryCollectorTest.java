@@ -1,6 +1,7 @@
 package be.hobbiton.maven.lipamp.common;
 
 import static be.hobbiton.maven.lipamp.common.ArchiveEntryCollector.*;
+import static be.hobbiton.maven.lipamp.common.TestConstants.BASEDIR;
 import static org.junit.Assert.*;
 
 import java.io.File;
@@ -19,7 +20,7 @@ public class ArchiveEntryCollectorTest {
     private static final String LEAF_USER = "hiuser";
     private static final String LEAF_GROUP = "higroup";
     private static final int LEAF_MODE = Integer.parseInt("0400", 8);
-    private static final File LEAF_FILE = new File("src/test/data/src/main/deb/etc/init/hiapp.conf");
+    private static final File LEAF_FILE = new File(BASEDIR, "deb/etc/init/hiapp.conf");
     private static final File MISSING_FILE = new File("src/test/missing-file");
     private ArchiveEntryCollector collector;
 

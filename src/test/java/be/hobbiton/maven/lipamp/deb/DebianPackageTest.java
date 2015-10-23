@@ -33,10 +33,10 @@ public class DebianPackageTest {
         CONTROL_FILES.add(new File(CONF_BASEDIR, "postinst"));
         DATA_FILES.add(new DirectoryArchiveEntry("./etc", ROOT_USERNAME, ROOT_GROUPNAME, DEFAULT_DIR_MODE));
         DATA_FILES.add(new DirectoryArchiveEntry("./etc/hiapp/", ROOT_USERNAME, ROOT_GROUPNAME, DEFAULT_DIR_MODE));
-        DATA_FILES.add(new FileArchiveEntry("./etc/hiapp/hiapp.conf", new File(BASEDIR, "etc/hiapp/hiapp.conf"),
+        DATA_FILES.add(new FileArchiveEntry("./etc/hiapp/hiapp.conf", new File(BASEDIR, "deb/etc/hiapp/hiapp.conf"),
                 ROOT_USERNAME, ROOT_GROUPNAME, DEFAULT_FILE_MODE));
         DATA_FILES.add(new DirectoryArchiveEntry("./etc/init/", ROOT_USERNAME, ROOT_GROUPNAME, DEFAULT_DIR_MODE));
-        DATA_FILES.add(new FileArchiveEntry("./etc/init/hiapp.conf", new File(BASEDIR, "etc/init/hiapp.conf"),
+        DATA_FILES.add(new FileArchiveEntry("./etc/init/hiapp.conf", new File(BASEDIR, "deb/etc/init/hiapp.conf"),
                 ROOT_USERNAME, ROOT_GROUPNAME, DEFAULT_FILE_MODE));
         DATA_FILES.add(new DirectoryArchiveEntry("./opt/", ROOT_USERNAME, ROOT_GROUPNAME, DEFAULT_DIR_MODE));
         DATA_FILES.add(new DirectoryArchiveEntry("./opt/hiapp/", ROOT_USERNAME, ROOT_GROUPNAME, DEFAULT_DIR_MODE));

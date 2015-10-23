@@ -13,6 +13,8 @@ import org.codehaus.plexus.util.StringUtils;
 import be.hobbiton.maven.lipamp.common.ArchiveEntry.ArchiveEntryType;
 
 public class ArchiveEntryCollector {
+    public static final String DOT = ".";
+    public static final String SLASH = "/";
     public static final String DEFAULT_USERNAME = "root";
     public static final String DEFAULT_GROUPNAME = "root";
     public static final String DEFAULT_FILEMODE = "0644";
@@ -75,14 +77,14 @@ public class ArchiveEntryCollector {
 
     private String cleanPath(String path, ArchiveEntryType type) {
         String newPath = path.trim();
-        if (type.equals(ArchiveEntryType.D) && !newPath.endsWith("/")) {
-            newPath = newPath + "/";
+        if (type.equals(ArchiveEntryType.D) && !newPath.endsWith(SLASH)) {
+            newPath = newPath + SLASH;
         }
-        if (newPath.startsWith(".")) {
+        if (newPath.startsWith(DOT)) {
             newPath = newPath.substring(1);
         }
-        if (!newPath.startsWith("/")) {
-            newPath = "/" + newPath;
+        if (!newPath.startsWith(SLASH)) {
+            newPath = SLASH + newPath;
         }
         return newPath;
     }

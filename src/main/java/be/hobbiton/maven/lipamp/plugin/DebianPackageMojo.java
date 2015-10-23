@@ -41,7 +41,10 @@ import be.hobbiton.maven.lipamp.deb.DebianPackage;
  */
 @Mojo(name = "makedeb", requiresProject = true, requiresDependencyResolution = ResolutionScope.COMPILE)
 public class DebianPackageMojo extends AbstractMojo {
-    private static final String CURRENT_PATH = ".";
+    private static final String CONFFILES_FILENAME = "conffiles";
+    private static final String CONTROL_FILENAME = "control";
+    private static final String CONFFILES_DIRNAME = "DEBIAN";
+    private static final String CURRENT_PATH = DOT;
     /** As the targets for this mojo are primary Java apps, the package is by default architecture independent */
     protected static final String DEFAULT_ARCHITECTURE = "all";
     protected static final String SNAPSHOT_SUFFIX = "-SNAPSHOT";
@@ -244,9 +247,25 @@ public class DebianPackageMojo extends AbstractMojo {
     @Parameter
     private String maintainer;
 
+    /**
+     * Directory containing the generated DEB.
+     *
+     * @since 1.1.0
+     */
+    @Parameter(defaultValue = "${project.build.directory}", required = true)
+    private File outputDirectory;
+
+    /**
+     * The directory where the resources are to be found
+     *
+     * @since 1.1.0
+     */
+    @Parameter(defaultValue = "${project.build.outputDirectory}", required = true)
+    private File resourcesDirectory;
+
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
-        File packageBasedir = new File(this.project.getBasedir(), "src/main/deb");
+        File packageBasedir = new File(this.resourcesDirectory, "deb");
         if (packageBasedir.isDirectory()) {
             ArchiveEntryCollector dataFilesCollector = new ArchiveEntryCollector();
             List<File> controlFiles = new ArrayList<File>();
@@ -308,19 +327,19 @@ public class DebianPackageMojo extends AbstractMojo {
         boolean haveConnffiles = false;
         Set<File> conffiles = new HashSet<File>();
         for (File file : packageBasedir.listFiles()) {
-            if ("DEBIAN".equals(file.getName())) {
+            if (CONFFILES_DIRNAME.equals(file.getName())) {
                 // add control files
                 for (File controlFile : file.listFiles()) {
                     getLog().debug("Adding control " + controlFile.getAbsolutePath());
-                    if ("control".equals(controlFile.getName())) {
+                    if (CONTROL_FILENAME.equals(controlFile.getName())) {
                         haveControl = true;
-                    } else if ("conffiles".equals(controlFile.getName())) {
+                    } else if (CONFFILES_FILENAME.equals(controlFile.getName())) {
                         haveConnffiles = true;
                     }
                     controlFiles.add(controlFile);
                 }
             } else {
-                addDataFile(dataFilesCollector, file, "/");
+                addDataFile(dataFilesCollector, file, SLASH);
             }
         }
         if (this.artifacts != null && this.artifacts.length > 0) {
@@ -328,8 +347,8 @@ public class DebianPackageMojo extends AbstractMojo {
                 if (StringUtils.isNotBlank(artifactEntry.getDestination())) {
                     Artifact depArtifact = getDependentArtifact(artifactEntry);
                     File destFile = null;
-                    if (artifactEntry.getDestination().endsWith("/")) {
-                        destFile = new File(cleanPath(artifactEntry.getDestination() + depArtifact.getArtifactId() + "."
+                    if (artifactEntry.getDestination().endsWith(SLASH)) {
+                        destFile = new File(cleanPath(artifactEntry.getDestination() + depArtifact.getArtifactId() + DOT
                                 + depArtifact.getType()));
                     } else {
                         destFile = new File(cleanPath(artifactEntry.getDestination()));
@@ -370,15 +389,15 @@ public class DebianPackageMojo extends AbstractMojo {
             }
         }
         if (!haveControl) {
-            controlFiles.add(generateControlFile(dataFilesCollector.getInstalledSize()));
+            controlFiles.add(generateControlFile(dataFilesCollector.getInstalledSize(), packageBasedir));
         }
         if (!haveConnffiles && !conffiles.isEmpty()) {
-            controlFiles.add(generateConnffilesFile(conffiles));
+            controlFiles.add(generateConnffilesFile(conffiles, packageBasedir));
         }
     }
 
-    private File generateConnffilesFile(Set<File> conffiles) throws MojoExecutionException {
-        File conffilesFile = new File(getValidOutputDir(), "conffiles");
+    private File generateConnffilesFile(Set<File> conffiles, File packageBasedir) throws MojoExecutionException {
+        File conffilesFile = new File(getValidConfigResourcesDir(packageBasedir), CONFFILES_FILENAME);
         FileOutputStream fos = null;
         try {
             fos = new FileOutputStream(conffilesFile);
@@ -424,10 +443,10 @@ public class DebianPackageMojo extends AbstractMojo {
 
     private String cleanPath(String path) {
         String newPath = path.trim();
-        if (newPath.endsWith("/")) {
+        if (newPath.endsWith(SLASH)) {
             newPath = path.substring(0, path.length() - 1);
         }
-        if (newPath.startsWith("/")) {
+        if (newPath.startsWith(SLASH)) {
             newPath = CURRENT_PATH + newPath;
         } else if (!newPath.startsWith(DebianPackage.CURRENT_DIR)) {
             newPath = DebianPackage.CURRENT_DIR + newPath;
@@ -447,7 +466,7 @@ public class DebianPackageMojo extends AbstractMojo {
         }
     }
 
-    private File generateControlFile(long installedSize) throws MojoExecutionException {
+    private File generateControlFile(long installedSize, File packageBasedir) throws MojoExecutionException {
         DebianControl control = new DebianControl();
         control.setPackageName(this.packageName);
         control.setVersion(getVersion());
@@ -460,7 +479,7 @@ public class DebianPackageMojo extends AbstractMojo {
         control.setHomepage(this.homepage);
         control.setSection(this.section);
         control.setPriority(this.priority);
-        File controlFile = new File(getValidOutputDir(), "control");
+        File controlFile = new File(getValidConfigResourcesDir(packageBasedir), CONTROL_FILENAME);
         FileOutputStream fos = null;
         try {
             fos = new FileOutputStream(controlFile);
@@ -483,14 +502,25 @@ public class DebianPackageMojo extends AbstractMojo {
         return sizeByte / 1024 + (((sizeByte % 1024) > 0) ? 1 : 0);
     }
 
-    private File getValidOutputDir() throws MojoExecutionException {
-        File outputDir = new File(this.project.getBuild().getDirectory());
-        if (!outputDir.isDirectory()) {
-            if (!outputDir.mkdirs()) {
-                throw new MojoExecutionException("Unable to create output directory: " + outputDir.getAbsolutePath());
+    private File getValidConfigResourcesDir(File packageBasedir) throws MojoExecutionException {
+        File debianConffilesDir = new File(packageBasedir, CONFFILES_DIRNAME);
+        if (!debianConffilesDir.isDirectory()) {
+            if (!debianConffilesDir.mkdirs()) {
+                throw new MojoExecutionException(
+                        "Unable to create debian resources directory: " + debianConffilesDir.getAbsolutePath());
             }
         }
-        return outputDir;
+        return debianConffilesDir;
+    }
+
+    private File getValidOutputDir() throws MojoExecutionException {
+        if (!this.outputDirectory.isDirectory()) {
+            if (!this.outputDirectory.mkdirs()) {
+                throw new MojoExecutionException(
+                        "Unable to create output directory: " + this.outputDirectory.getAbsolutePath());
+            }
+        }
+        return this.outputDirectory;
     }
 
     private void addDataFile(ArchiveEntryCollector dataFilesCollector, File datafile, String prefix) {
@@ -501,7 +531,7 @@ public class DebianPackageMojo extends AbstractMojo {
                     this.defaultGroupname, getDefaultDirectoryMode());
             dataFilesCollector.add(dirEntry);
             for (File nestedDataFile : datafile.listFiles()) {
-                addDataFile(dataFilesCollector, nestedDataFile, name + "/");
+                addDataFile(dataFilesCollector, nestedDataFile, name + SLASH);
             }
         } else {
             FileArchiveEntry fileEntry = new FileArchiveEntry(name, datafile, this.defaultUsername,
@@ -606,5 +636,13 @@ public class DebianPackageMojo extends AbstractMojo {
 
     protected void setArchitecture(String architecture) {
         this.architecture = architecture;
+    }
+
+    public void setOutputDirectory(File outputDirectory) {
+        this.outputDirectory = outputDirectory;
+    }
+
+    public void setResourcesDirectory(File resourcesDirectory) {
+        this.resourcesDirectory = resourcesDirectory;
     }
 }
