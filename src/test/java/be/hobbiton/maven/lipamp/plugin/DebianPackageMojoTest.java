@@ -2,6 +2,7 @@ package be.hobbiton.maven.lipamp.plugin;
 
 import static be.hobbiton.maven.lipamp.common.ArchiveEntryCollector.*;
 import static be.hobbiton.maven.lipamp.common.TestConstants.*;
+import static be.hobbiton.maven.lipamp.deb.DebInfo.DebianInfoFile.*;
 import static be.hobbiton.maven.lipamp.plugin.DebianPackageMojo.*;
 import static org.junit.Assert.*;
 
@@ -19,7 +20,6 @@ import org.apache.maven.artifact.handler.DefaultArtifactHandler;
 import org.apache.maven.artifact.repository.layout.ArtifactRepositoryLayout;
 import org.apache.maven.artifact.repository.layout.DefaultRepositoryLayout;
 import org.apache.maven.artifact.versioning.VersionRange;
-import org.apache.maven.model.Build;
 import org.apache.maven.model.Developer;
 import org.apache.maven.model.Model;
 import org.apache.maven.plugin.MojoFailureException;
@@ -38,6 +38,8 @@ import be.hobbiton.maven.lipamp.deb.DebInfoTest;
 import be.hobbiton.maven.lipamp.deb.DebianPackage;
 
 public class DebianPackageMojoTest {
+    private static final String CONFFILES_PATH = "deb/DEBIAN/" + CONFFILES.getFilename();
+    private static final String CONTROL_PATH = "deb/DEBIAN/" + CONTROL.getFilename();
     private static final String CONFIG_FOLDERNAME = "etc/hiapp";
     private static final String CONFIG_FOLDERPATH = DebianPackage.CURRENT_DIR + CONFIG_FOLDERNAME + "/";
     private static final String CONFIGMODE = "750";
@@ -53,7 +55,7 @@ public class DebianPackageMojoTest {
     private static final String ARTIFACTID = "hiapp-pkg";
     private static final String GROUPID = "be.hobbiton.cloud";
     private static final String VERSION = "1.0.0";
-    private static final String PACKAGING = "deb";
+    private static final String PACKAGING = DEBIAN_PACKAGING_TYPE;
     private static final String NAME = "Cloud hi server";
     private static final String DESCRIPTION = "Cloud hi server - Non Secure Implementation";
     private static final String DEPENDS = "jdk, tomcat";
@@ -64,8 +66,7 @@ public class DebianPackageMojoTest {
     private static final File OUTPUT_DIR = new File("target/DebianPackageMojoTest");
     private static final File RESOURCES_DIR = new File(OUTPUT_DIR, "classes");
     private static final String PACKAGE_FINALNAME = ARTIFACTID + "-" + VERSION;
-    private static final String PACKAGE_FINAL_FILENAME = ARTIFACTID + "-" + VERSION + ".deb";
-    private static final File PACKAGE_FILE = new File(OUTPUT_DIR, PACKAGE_FINAL_FILENAME);
+    private static final String PACKAGE_FINAL_FILENAME = ARTIFACTID + "-" + VERSION + DEBIAN_FILE_EXTENSION;
     private static final String SYSTEM_USERNAME = "myusername";
     private static final List<Developer> DEVELOPERS = new ArrayList<Developer>();
     private static final FolderEntry[] FOLDERS = new FolderEntry[] {
@@ -78,7 +79,6 @@ public class DebianPackageMojoTest {
     private static final DefaultArtifact DEP_ARTIFACT = new DefaultArtifact(DEP_GROUPID, DEP_ARTIFACTID, DEP_VERSION,
             "compile", DEP_PACKAGING, null, new DefaultArtifactHandler(DEP_PACKAGING));
     private Model model;
-    private Build build;
     private MavenProject project;
     private DebianPackageMojo mojo;
     private Artifact artifact;
@@ -95,7 +95,8 @@ public class DebianPackageMojoTest {
     public void setUp() throws Exception {
         tearDown();
         assertTrue(RESOURCES_DIR.mkdirs());
-        FileUtils.copyDirectoryStructure(new File(BASEDIR, "deb"), new File(RESOURCES_DIR, "deb"));
+        FileUtils.copyDirectoryStructure(new File(BASEDIR, DEBIAN_RESOURCES_DIRNAME),
+                new File(RESOURCES_DIR, DEBIAN_RESOURCES_DIRNAME));
         this.model = new Model();
         this.model.setArtifactId(ARTIFACTID);
         this.model.setGroupId(GROUPID);
@@ -140,7 +141,8 @@ public class DebianPackageMojoTest {
         assertEquals(PACKAGE_FINAL_FILENAME, artifactFile.getName());
         DebInfo debianInfo = new DebInfo(artifactFile);
         LOGGER.debug(debianInfo.toString());
-        DebInfoTest.assertControl(debianInfo, new String[] { "conffiles", "control", "postinst" });
+        DebInfoTest.assertControl(debianInfo,
+                new String[] { CONFFILES.getFilename(), CONTROL.getFilename(), POST_INSTALL.getFilename() });
         assertEquals(6, debianInfo.getDataFiles().size());
         assertInPackage(debianInfo, CONFIG_FOLDERPATH, DEFAULT_USERNAME, DEFAULT_GROUPNAME, DEFAULT_DIRMODE_VALUE);
         assertEquals(FILE_PACKAGENAME, debianInfo.getControl().getPackageName());
@@ -161,7 +163,8 @@ public class DebianPackageMojoTest {
         this.mojo.execute();
         DebInfo debianInfo = new DebInfo(this.project.getArtifact().getFile());
         LOGGER.debug(debianInfo.toString());
-        DebInfoTest.assertControl(debianInfo, new String[] { "conffiles", "control", "postinst" });
+        DebInfoTest.assertControl(debianInfo,
+                new String[] { CONFFILES.getFilename(), CONTROL.getFilename(), POST_INSTALL.getFilename() });
         assertEquals(6, debianInfo.getDataFiles().size());
         assertInPackage(debianInfo, CONFIG_FOLDERPATH, ART_USER, ART_GROUP, CONFIGMODE_VALUE);
         assertEquals(FILE_PACKAGENAME, debianInfo.getControl().getPackageName());
@@ -180,7 +183,8 @@ public class DebianPackageMojoTest {
         this.mojo.execute();
         DebInfo debianInfo = new DebInfo(this.project.getArtifact().getFile());
         LOGGER.debug(debianInfo.toString());
-        DebInfoTest.assertControl(debianInfo, new String[] { "conffiles", "control", "postinst" });
+        DebInfoTest.assertControl(debianInfo,
+                new String[] { CONFFILES.getFilename(), CONTROL.getFilename(), POST_INSTALL.getFilename() });
         assertEquals(9, debianInfo.getDataFiles().size());
         assertEquals(FILE_PACKAGENAME, debianInfo.getControl().getPackageName());
         assertEquals(FILE_VERSION, debianInfo.getControl().getVersion());
@@ -194,7 +198,7 @@ public class DebianPackageMojoTest {
     @Test
     public void testExecuteFull() throws Exception {
         this.model.setDevelopers(DEVELOPERS);
-        assertTrue(new File(RESOURCES_DIR, "deb/DEBIAN/control").delete());
+        assertTrue(new File(RESOURCES_DIR, CONTROL_PATH).delete());
         this.mojo.setFolders(FOLDERS);
         Set<Artifact> deps = new HashSet<Artifact>();
         deps.add(DEP_ARTIFACT);
@@ -207,7 +211,8 @@ public class DebianPackageMojoTest {
         this.mojo.execute();
         DebInfo debianInfo = new DebInfo(this.project.getArtifact().getFile());
         LOGGER.debug(debianInfo.toString());
-        DebInfoTest.assertControl(debianInfo, new String[] { "conffiles", "control", "postinst" });
+        DebInfoTest.assertControl(debianInfo,
+                new String[] { CONFFILES.getFilename(), CONTROL.getFilename(), POST_INSTALL.getFilename() });
         assertEquals(12, debianInfo.getDataFiles().size());
         assertInPackage(debianInfo, DEP_FILEPATH, ART_USER, ART_GROUP, CONFIGMODE_VALUE);
         assertEquals(ARTIFACTID, debianInfo.getControl().getPackageName());
@@ -233,7 +238,8 @@ public class DebianPackageMojoTest {
         this.mojo.execute();
         DebInfo debianInfo = new DebInfo(this.project.getArtifact().getFile());
         LOGGER.debug(debianInfo.toString());
-        DebInfoTest.assertControl(debianInfo, new String[] { "conffiles", "control", "postinst" });
+        DebInfoTest.assertControl(debianInfo,
+                new String[] { CONFFILES.getFilename(), CONTROL.getFilename(), POST_INSTALL.getFilename() });
         assertEquals(9, debianInfo.getDataFiles().size());
         assertInPackage(debianInfo, DEP_FILEPATH, ART_USER, ART_GROUP, CONFIGMODE_VALUE);
         assertEquals(FILE_PACKAGENAME, debianInfo.getControl().getPackageName());
@@ -272,7 +278,8 @@ public class DebianPackageMojoTest {
         this.mojo.execute();
         DebInfo debianInfo = new DebInfo(this.project.getArtifact().getFile());
         LOGGER.debug(debianInfo.toString());
-        DebInfoTest.assertControl(debianInfo, new String[] { "conffiles", "control", "postinst" });
+        DebInfoTest.assertControl(debianInfo,
+                new String[] { CONFFILES.getFilename(), CONTROL.getFilename(), POST_INSTALL.getFilename() });
         assertEquals(6, debianInfo.getDataFiles().size());
         assertInPackage(debianInfo, CONFIG_FOLDERPATH, CONFIGUSER, CONFIGGROUP, DEFAULT_DIRMODE_VALUE);
         assertEquals(FILE_PACKAGENAME, debianInfo.getControl().getPackageName());
@@ -291,7 +298,8 @@ public class DebianPackageMojoTest {
         this.mojo.execute();
         DebInfo debianInfo = new DebInfo(this.project.getArtifact().getFile());
         LOGGER.debug(debianInfo.toString());
-        DebInfoTest.assertControl(debianInfo, new String[] { "conffiles", "control", "postinst" });
+        DebInfoTest.assertControl(debianInfo,
+                new String[] { CONFFILES.getFilename(), CONTROL.getFilename(), POST_INSTALL.getFilename() });
         assertEquals(6, debianInfo.getDataFiles().size());
         assertInPackage(debianInfo, CONFIG_FOLDERPATH, DEFAULT_USERNAME, DEFAULT_GROUPNAME, CONFIGMODE_VALUE);
         assertEquals(FILE_PACKAGENAME, debianInfo.getControl().getPackageName());
@@ -305,10 +313,11 @@ public class DebianPackageMojoTest {
 
     @Test
     public void testExecuteNoControl() throws Exception {
-        assertTrue(new File(RESOURCES_DIR, "deb/DEBIAN/control").delete());
+        assertTrue(new File(RESOURCES_DIR, CONTROL_PATH).delete());
         this.mojo.execute();
         DebInfo debianInfo = new DebInfo(this.project.getArtifact().getFile());
-        DebInfoTest.assertControl(debianInfo, new String[] { "conffiles", "control", "postinst" });
+        DebInfoTest.assertControl(debianInfo,
+                new String[] { CONFFILES.getFilename(), CONTROL.getFilename(), POST_INSTALL.getFilename() });
         assertEquals(6, debianInfo.getDataFiles().size());
         assertEquals(ARTIFACTID, debianInfo.getControl().getPackageName());
         assertEquals(VERSION, debianInfo.getControl().getVersion());
@@ -332,7 +341,7 @@ public class DebianPackageMojoTest {
 
     @Test
     public void testExecuteNoControlAllParametersSet() throws Exception {
-        assertTrue(new File(RESOURCES_DIR, "deb/DEBIAN/control").delete());
+        assertTrue(new File(RESOURCES_DIR, CONTROL_PATH).delete());
         this.mojo.setPackageName(CUSTOM_PACKAGENAME);
         this.mojo.setVersion(CUSTOM_VERSION);
         this.mojo.setArchitecture(CUSTOM_ARCHITECTURE);
@@ -345,7 +354,8 @@ public class DebianPackageMojoTest {
         this.mojo.setDepends(CUSTOM_DEPENDS);
         this.mojo.execute();
         DebInfo debianInfo = new DebInfo(this.project.getArtifact().getFile());
-        DebInfoTest.assertControl(debianInfo, new String[] { "conffiles", "control", "postinst" });
+        DebInfoTest.assertControl(debianInfo,
+                new String[] { CONFFILES.getFilename(), CONTROL.getFilename(), POST_INSTALL.getFilename() });
         assertEquals(6, debianInfo.getDataFiles().size());
         assertEquals(CUSTOM_PACKAGENAME, debianInfo.getControl().getPackageName());
         assertEquals(CUSTOM_VERSION, debianInfo.getControl().getVersion());
@@ -362,11 +372,11 @@ public class DebianPackageMojoTest {
 
     @Test
     public void testExecuteNoConfig() throws Exception {
-        assertTrue(new File(RESOURCES_DIR, "deb/DEBIAN/control").delete());
-        assertTrue(new File(RESOURCES_DIR, "deb/DEBIAN/conffiles").delete());
+        assertTrue(new File(RESOURCES_DIR, CONTROL_PATH).delete());
+        assertTrue(new File(RESOURCES_DIR, CONFFILES_PATH).delete());
         this.mojo.execute();
         DebInfo debianInfo = new DebInfo(this.project.getArtifact().getFile());
-        DebInfoTest.assertControl(debianInfo, new String[] { "control", "postinst" });
+        DebInfoTest.assertControl(debianInfo, new String[] { CONTROL.getFilename(), POST_INSTALL.getFilename() });
         assertEquals(6, debianInfo.getDataFiles().size());
         assertEquals(ARTIFACTID, debianInfo.getControl().getPackageName());
         assertEquals(VERSION, debianInfo.getControl().getVersion());
@@ -379,15 +389,16 @@ public class DebianPackageMojoTest {
 
     @Test
     public void testExecuteNoConfigAtt() throws Exception {
-        assertTrue(new File(RESOURCES_DIR, "deb/DEBIAN/control").delete());
-        assertTrue(new File(RESOURCES_DIR, "deb/DEBIAN/conffiles").delete());
+        assertTrue(new File(RESOURCES_DIR, CONTROL_PATH).delete());
+        assertTrue(new File(RESOURCES_DIR, CONFFILES_PATH).delete());
         AttributeSelector[] attributeSelectors = new AttributeSelector[] {
                 new AttributeSelector("/**/*.conf", null, null, null, true) };
         this.mojo.setAttributes(attributeSelectors);
         this.mojo.execute();
         DebInfo debianInfo = new DebInfo(this.project.getArtifact().getFile());
         LOGGER.debug(debianInfo.toString());
-        DebInfoTest.assertControl(debianInfo, new String[] { "control", "postinst", "conffiles" });
+        DebInfoTest.assertControl(debianInfo,
+                new String[] { CONFFILES.getFilename(), CONTROL.getFilename(), POST_INSTALL.getFilename() });
         DebInfoTest.assertConffiles(debianInfo, new String[] { "/etc/hiapp/hiapp.conf", "/etc/init/hiapp.conf" });
         assertEquals(6, debianInfo.getDataFiles().size());
         assertEquals(ARTIFACTID, debianInfo.getControl().getPackageName());

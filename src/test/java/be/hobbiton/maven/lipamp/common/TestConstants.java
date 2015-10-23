@@ -4,10 +4,14 @@ import java.io.File;
 
 import org.apache.maven.artifact.versioning.VersionRange;
 
+import be.hobbiton.maven.lipamp.deb.DebInfo;
+import be.hobbiton.maven.lipamp.plugin.DebianPackageMojo;
+
 public final class TestConstants {
     public static final File BASEDIR = new File("src/test/data");
-    public static final File CONF_BASEDIR = new File(BASEDIR, "deb/DEBIAN");
-    public static final File CONTROL_FILE = new File(CONF_BASEDIR, "control");
+    public static final File DEB_BASEDIR = new File(BASEDIR, DebianPackageMojo.DEBIAN_RESOURCES_DIRNAME);
+    public static final File CONF_BASEDIR = new File(DEB_BASEDIR, DebianPackageMojo.CONFFILES_DIRNAME);
+    public static final File CONTROL_FILE = new File(CONF_BASEDIR, DebInfo.DebianInfoFile.CONTROL.getFilename());
     public static final String FILE_DEPENDS = "oracle-java8";
     public static final String FILE_DESCRIPTION = "Cloud hello server - Non Secure Implementation";
     public static final String FILE_DESCR_SYNOPSIS = "Cloud hello server";

@@ -5,7 +5,7 @@ import java.io.File;
 import org.codehaus.plexus.util.StringUtils;
 
 public class ArchiveEntry {
-    public static int INVALID_MODE;
+    public static final int INVALID_MODE = -1;
     private String name;
     private File file;
     private String userName;

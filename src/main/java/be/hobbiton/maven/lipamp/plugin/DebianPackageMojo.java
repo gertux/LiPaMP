@@ -1,6 +1,7 @@
 package be.hobbiton.maven.lipamp.plugin;
 
 import static be.hobbiton.maven.lipamp.common.ArchiveEntryCollector.*;
+import static be.hobbiton.maven.lipamp.deb.DebInfo.DebianInfoFile.*;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -41,9 +42,10 @@ import be.hobbiton.maven.lipamp.deb.DebianPackage;
  */
 @Mojo(name = "makedeb", requiresProject = true, requiresDependencyResolution = ResolutionScope.COMPILE)
 public class DebianPackageMojo extends AbstractMojo {
-    private static final String CONFFILES_FILENAME = "conffiles";
-    private static final String CONTROL_FILENAME = "control";
-    private static final String CONFFILES_DIRNAME = "DEBIAN";
+    public static final String DEBIAN_PACKAGING_TYPE = "deb";
+    public static final String DEBIAN_RESOURCES_DIRNAME = "deb";
+    public static final String DEBIAN_FILE_EXTENSION = ".deb";
+    public static final String CONFFILES_DIRNAME = "DEBIAN";
     private static final String CURRENT_PATH = DOT;
     /** As the targets for this mojo are primary Java apps, the package is by default architecture independent */
     protected static final String DEFAULT_ARCHITECTURE = "all";
@@ -265,7 +267,7 @@ public class DebianPackageMojo extends AbstractMojo {
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
-        File packageBasedir = new File(this.resourcesDirectory, "deb");
+        File packageBasedir = new File(this.resourcesDirectory, DEBIAN_RESOURCES_DIRNAME);
         if (packageBasedir.isDirectory()) {
             ArchiveEntryCollector dataFilesCollector = new ArchiveEntryCollector();
             List<File> controlFiles = new ArrayList<File>();
@@ -280,7 +282,7 @@ public class DebianPackageMojo extends AbstractMojo {
     }
 
     protected File getPackageFile() throws MojoExecutionException {
-        File packageFile = new File(getValidOutputDir(), this.finalName + ".deb");
+        File packageFile = new File(getValidOutputDir(), this.finalName + DEBIAN_FILE_EXTENSION);
         getLog().info("Writing Debian package file to: " + packageFile.getAbsolutePath());
         return packageFile;
     }
@@ -331,9 +333,9 @@ public class DebianPackageMojo extends AbstractMojo {
                 // add control files
                 for (File controlFile : file.listFiles()) {
                     getLog().debug("Adding control " + controlFile.getAbsolutePath());
-                    if (CONTROL_FILENAME.equals(controlFile.getName())) {
+                    if (CONTROL.getFilename().equals(controlFile.getName())) {
                         haveControl = true;
-                    } else if (CONFFILES_FILENAME.equals(controlFile.getName())) {
+                    } else if (CONFFILES.getFilename().equals(controlFile.getName())) {
                         haveConnffiles = true;
                     }
                     controlFiles.add(controlFile);
@@ -397,7 +399,7 @@ public class DebianPackageMojo extends AbstractMojo {
     }
 
     private File generateConnffilesFile(Set<File> conffiles, File packageBasedir) throws MojoExecutionException {
-        File conffilesFile = new File(getValidConfigResourcesDir(packageBasedir), CONFFILES_FILENAME);
+        File conffilesFile = new File(getValidConfigResourcesDir(packageBasedir), CONFFILES.getFilename());
         FileOutputStream fos = null;
         try {
             fos = new FileOutputStream(conffilesFile);
@@ -479,7 +481,7 @@ public class DebianPackageMojo extends AbstractMojo {
         control.setHomepage(this.homepage);
         control.setSection(this.section);
         control.setPriority(this.priority);
-        File controlFile = new File(getValidConfigResourcesDir(packageBasedir), CONTROL_FILENAME);
+        File controlFile = new File(getValidConfigResourcesDir(packageBasedir), CONTROL.getFilename());
         FileOutputStream fos = null;
         try {
             fos = new FileOutputStream(controlFile);

@@ -13,7 +13,7 @@ import org.junit.Test;
 
 public class DebianControlTest {
     private static final File OUTPUT_DIR = new File("target/DebianControlTest");
-    private static final File NEW_CONTROL_FILE = new File(OUTPUT_DIR, "control");
+    private static final File NEW_CONTROL_FILE = new File(OUTPUT_DIR, DebInfo.DebianInfoFile.CONTROL.getFilename());
     private static final String HOMEPAGE = "http://www.home.com";
 
     @Before

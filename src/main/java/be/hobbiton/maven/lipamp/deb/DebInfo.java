@@ -38,6 +38,8 @@ import be.hobbiton.maven.lipamp.deb.DebianControl.DebianControlField;
  *
  */
 public class DebInfo {
+    private static final String CONTROL_SUFFIX = "/" + DebianInfoFile.CONTROL.getFilename();
+    private static final String CONFFILES_SUFFIX = "/" + DebianInfoFile.CONFFILES.getFilename();
     private static final String LINEFEED = "\n";
     private DebianControl control;
     private Collection<File> controlFiles;
@@ -76,9 +78,11 @@ public class DebInfo {
             this.controlFiles = new ArrayList<File>();
             while (tarEntry != null) {
                 this.controlFiles.add(new File(tarEntry.getName()));
-                if ("control".equals(tarEntry.getName()) || tarEntry.getName().endsWith("/control")) {
+                if (DebianInfoFile.CONTROL.getFilename().equals(tarEntry.getName())
+                        || tarEntry.getName().endsWith(CONTROL_SUFFIX)) {
                     this.control = new DebianControl(tar);
-                } else if ("conffiles".equals(tarEntry.getName()) || tarEntry.getName().endsWith("/conffiles")) {
+                } else if (DebianInfoFile.CONFFILES.getFilename().equals(tarEntry.getName())
+                        || tarEntry.getName().endsWith(CONFFILES_SUFFIX)) {
                     readConffiles(tar);
                 }
                 tarEntry = tar.getNextTarEntry();
@@ -217,5 +221,28 @@ public class DebInfo {
             sb.append(dataFile).append(LINEFEED);
         }
         return sb.toString();
+    }
+
+    public enum DebianInfoFile {
+        CONTROL("control"), CONFFILES("conffiles"), PRE_INSTALL("preinst"), POST_INSTALL("postinst"), PRE_REMOVE(
+                "premr"), POST_REMOVE("postrm");
+        private final String filename;
+
+        public final String getFilename() {
+            return this.filename;
+        }
+
+        DebianInfoFile(String n) {
+            this.filename = n;
+        }
+
+        public static DebianInfoFile fromFieldname(String n) {
+            for (DebianInfoFile f : DebianInfoFile.values()) {
+                if (f.filename.equals(n)) {
+                    return f;
+                }
+            }
+            throw new IllegalArgumentException("Unknown File name: " + n);
+        }
     }
 }

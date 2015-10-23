@@ -1,6 +1,7 @@
 package be.hobbiton.maven.lipamp.deb;
 
 import static be.hobbiton.maven.lipamp.common.TestConstants.*;
+import static be.hobbiton.maven.lipamp.deb.DebInfo.DebianInfoFile.*;
 import static org.junit.Assert.*;
 
 import java.io.File;
@@ -22,7 +23,8 @@ public class DebInfoTest {
     public void testGetInfo() throws DebianArchiveException {
         DebInfo debInfo = new DebInfo(this.packageFile);
         LOGGER.debug(debInfo.toString());
-        DebInfoTest.assertControl(debInfo, new String[] { "conffiles", "control", "postinst" });
+        DebInfoTest.assertControl(debInfo,
+                new String[] { CONFFILES.getFilename(), CONTROL.getFilename(), POST_INSTALL.getFilename() });
         DebInfoTest.assertConffiles(debInfo, new String[] { "/etc/hiapp/hiapp.conf" });
         assertEquals(8, debInfo.getDataFiles().size());
         assertEquals(FILE_PACKAGENAME, debInfo.getControl().getPackageName());

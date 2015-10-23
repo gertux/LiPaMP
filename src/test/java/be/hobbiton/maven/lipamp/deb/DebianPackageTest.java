@@ -1,6 +1,7 @@
 package be.hobbiton.maven.lipamp.deb;
 
 import static be.hobbiton.maven.lipamp.common.TestConstants.*;
+import static be.hobbiton.maven.lipamp.deb.DebInfo.DebianInfoFile.*;
 import static be.hobbiton.maven.lipamp.deb.DebianPackage.*;
 import static org.junit.Assert.*;
 
@@ -28,9 +29,9 @@ public class DebianPackageTest {
     private File outputFile;
 
     static {
-        CONTROL_FILES.add(new File(CONF_BASEDIR, "conffiles"));
-        CONTROL_FILES.add(new File(CONF_BASEDIR, "control"));
-        CONTROL_FILES.add(new File(CONF_BASEDIR, "postinst"));
+        CONTROL_FILES.add(new File(CONF_BASEDIR, CONFFILES.getFilename()));
+        CONTROL_FILES.add(new File(CONF_BASEDIR, CONTROL.getFilename()));
+        CONTROL_FILES.add(new File(CONF_BASEDIR, POST_INSTALL.getFilename()));
         DATA_FILES.add(new DirectoryArchiveEntry("./etc", ROOT_USERNAME, ROOT_GROUPNAME, DEFAULT_DIR_MODE));
         DATA_FILES.add(new DirectoryArchiveEntry("./etc/hiapp/", ROOT_USERNAME, ROOT_GROUPNAME, DEFAULT_DIR_MODE));
         DATA_FILES.add(new FileArchiveEntry("./etc/hiapp/hiapp.conf", new File(BASEDIR, "deb/etc/hiapp/hiapp.conf"),
