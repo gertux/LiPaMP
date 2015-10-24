@@ -6,15 +6,12 @@ import org.codehaus.plexus.util.StringUtils;
 /**
  * Artifact to be included in a package
  */
-public class ArtifactPackageEntry implements Comparable<Artifact> {
+public class ArtifactPackageEntry extends Attributable {
     protected static String DEFAULT_TYPE = "jar";
     private String artifactId;
     private String groupId;
     private String type = DEFAULT_TYPE;
     private String destination;
-    private String username;
-    private String groupname;
-    private String mode;
 
     public ArtifactPackageEntry() {
         super();
@@ -27,9 +24,9 @@ public class ArtifactPackageEntry implements Comparable<Artifact> {
         this.groupId = groupId;
         setType(type);
         this.destination = destination;
-        this.username = username;
-        this.groupname = groupname;
-        this.mode = mode;
+        setUsername(username);
+        setGroupname(groupname);
+        setMode(mode);
     }
 
     public String getArtifactId() {
@@ -64,30 +61,6 @@ public class ArtifactPackageEntry implements Comparable<Artifact> {
         this.destination = destination;
     }
 
-    public String getUsername() {
-        return this.username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public String getGroupname() {
-        return this.groupname;
-    }
-
-    public void setGroupname(String groupname) {
-        this.groupname = groupname;
-    }
-
-    public String getMode() {
-        return this.mode;
-    }
-
-    public void setMode(String mode) {
-        this.mode = mode;
-    }
-
     @Override
     public String toString() {
         return String.format("%s:%s:%s", this.groupId, this.artifactId, this.type);
@@ -98,15 +71,17 @@ public class ArtifactPackageEntry implements Comparable<Artifact> {
                 && (StringUtils.isNotBlank(this.type)) && (StringUtils.isNotBlank(this.destination));
     }
 
-    @Override
-    public int compareTo(Artifact a) {
+    public boolean matches(Artifact a) {
         int result = this.groupId.compareTo(a.getGroupId());
         if (result == 0) {
             result = this.artifactId.compareTo(a.getArtifactId());
             if (result == 0) {
                 result = this.type.compareTo(a.getType());
+                if (a.getClassifier() != null) {
+                    result = -1;
+                }
             }
         }
-        return result;
+        return result == 0;
     }
 }

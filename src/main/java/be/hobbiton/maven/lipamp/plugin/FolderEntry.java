@@ -2,11 +2,8 @@ package be.hobbiton.maven.lipamp.plugin;
 
 import org.codehaus.plexus.util.StringUtils;
 
-public class FolderEntry {
+public class FolderEntry extends Attributable {
     private String path;
-    private String username;
-    private String groupname;
-    private String mode;
 
     public FolderEntry() {
         super();
@@ -15,9 +12,9 @@ public class FolderEntry {
     public FolderEntry(String path, String username, String groupname, String mode) {
         super();
         this.path = path;
-        this.username = username;
-        this.groupname = groupname;
-        this.mode = mode;
+        setUsername(username);
+        setGroupname(groupname);
+        setMode(mode);
     }
 
     public String getPath() {
@@ -28,36 +25,12 @@ public class FolderEntry {
         this.path = path;
     }
 
-    public String getUsername() {
-        return this.username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public String getGroupname() {
-        return this.groupname;
-    }
-
-    public void setGroupname(String groupname) {
-        this.groupname = groupname;
-    }
-
-    public String getMode() {
-        return this.mode;
-    }
-
-    public void setMode(String mode) {
-        this.mode = mode;
-    }
-
     public boolean isValid() {
         return StringUtils.isNotBlank(this.path);
     }
 
     @Override
     public String toString() {
-        return String.format("path=%s u=%s g=%s m=%s", this.path, this.username, this.groupname, this.mode);
+        return String.format("path=%s u=%s g=%s m=%s", this.path, getUsername(), getGroupname(), getMode());
     }
 }

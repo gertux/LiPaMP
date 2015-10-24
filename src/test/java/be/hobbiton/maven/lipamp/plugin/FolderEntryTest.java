@@ -33,4 +33,13 @@ public class FolderEntryTest {
         assertFalse(new FolderEntry(null, USERNAME, GROUPNAME, null).isValid());
         assertFalse(new FolderEntry(null, USERNAME, GROUPNAME, MODE).isValid());
     }
+
+    @Test
+    public void testMiscValid() {
+        FolderEntry entry = new FolderEntry();
+        assertFalse(entry.isValid());
+        entry.setPath(PATH);
+        assertTrue(entry.isValid());
+        assertTrue(entry.toString().contains(PATH));
+    }
 }

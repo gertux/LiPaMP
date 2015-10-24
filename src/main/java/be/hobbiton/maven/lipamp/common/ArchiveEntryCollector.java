@@ -48,30 +48,38 @@ public class ArchiveEntryCollector {
 
     private void mergeEntries(ArchiveEntry existingEntry, ArchiveEntry newEntry) {
         if (existingEntry != null) {
-            if (StringUtils.isNotBlank(newEntry.getUserName())) {
-                existingEntry.setUserName(newEntry.getUserName());
-            }
-            if (StringUtils.isNotBlank(newEntry.getGroupName())) {
-                existingEntry.setGroupName(newEntry.getGroupName());
-            }
-            if (newEntry.getMode() > ArchiveEntry.INVALID_MODE) {
-                existingEntry.setMode(newEntry.getMode());
-            }
+            handleExistingEntry(existingEntry, newEntry);
         } else {
-            if (StringUtils.isBlank(newEntry.getUserName())) {
-                newEntry.setUserName(this.defaultUsername);
-            }
-            if (StringUtils.isBlank(newEntry.getGroupName())) {
-                newEntry.setGroupName(this.defaultGroupname);
-            }
-            if (newEntry.getMode() <= ArchiveEntry.INVALID_MODE) {
-                newEntry.setMode(
-                        (newEntry.getType().equals(ArchiveEntryType.D)) ? this.defaultDirmode : this.defaultFilemode);
-            }
-            this.entries.put(newEntry.getName(), newEntry);
-            if (newEntry.getFile() != null && newEntry.getFile().isFile()) {
-                this.installedSize += newEntry.getFile().length();
-            }
+            handleNewEntry(newEntry);
+        }
+    }
+
+    private void handleNewEntry(ArchiveEntry newEntry) {
+        if (StringUtils.isBlank(newEntry.getUserName())) {
+            newEntry.setUserName(this.defaultUsername);
+        }
+        if (StringUtils.isBlank(newEntry.getGroupName())) {
+            newEntry.setGroupName(this.defaultGroupname);
+        }
+        if (newEntry.getMode() <= ArchiveEntry.INVALID_MODE) {
+            newEntry.setMode(
+                    (newEntry.getType().equals(ArchiveEntryType.D)) ? this.defaultDirmode : this.defaultFilemode);
+        }
+        this.entries.put(newEntry.getName(), newEntry);
+        if (newEntry.getFile() != null && newEntry.getFile().isFile()) {
+            this.installedSize += newEntry.getFile().length();
+        }
+    }
+
+    private void handleExistingEntry(ArchiveEntry existingEntry, ArchiveEntry newEntry) {
+        if (StringUtils.isNotBlank(newEntry.getUserName())) {
+            existingEntry.setUserName(newEntry.getUserName());
+        }
+        if (StringUtils.isNotBlank(newEntry.getGroupName())) {
+            existingEntry.setGroupName(newEntry.getGroupName());
+        }
+        if (newEntry.getMode() > ArchiveEntry.INVALID_MODE) {
+            existingEntry.setMode(newEntry.getMode());
         }
     }
 

@@ -20,22 +20,26 @@ import org.apache.commons.compress.compressors.CompressorException;
 import org.apache.commons.compress.compressors.CompressorOutputStream;
 import org.apache.commons.compress.compressors.CompressorStreamFactory;
 import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugin.logging.Log;
 
 import be.hobbiton.maven.lipamp.common.ArchiveEntry;
 import be.hobbiton.maven.lipamp.common.ArchiveEntry.ArchiveEntryType;
+import be.hobbiton.maven.lipamp.common.Packager;
 
-public class DebianPackage {
+public class DebianPackage implements Packager {
     private static final String ROOTUSERNAME = "root";
     private static final String ROOTGROUPNAME = "root";
     public static final String CURRENT_DIR = "./";
     private static final int DEFAULT_BUFFER_SIZE = 1024 * 8;
     protected static final int DEFAULT_DIR_MODE = Integer.parseInt("755", 8);
     protected static final int DEFAULT_FILE_MODE = Integer.parseInt("644", 8);
-    protected static final byte[] DEBIAN_BINARY_2_0 = "2.0\n".getBytes();
+    private static final byte[] DEBIAN_BINARY_2_0 = "2.0\n".getBytes();
     private Collection<ArchiveEntry> controlFiles;
     private Collection<ArchiveEntry> dataFiles;
+    private Log logger;
 
-    public DebianPackage(Collection<File> controlFiles, Collection<ArchiveEntry> dataFiles) {
+    public DebianPackage(Collection<File> controlFiles, Collection<ArchiveEntry> dataFiles, Log logger) {
+        this.logger = logger;
         setControlFiles(controlFiles);
         setDataFiles(dataFiles);
     }
@@ -64,10 +68,12 @@ public class DebianPackage {
         }
     }
 
+    @Override
     public void write(File outputFile) throws DebianPackageException {
+        this.logger.info("WRITING to " + outputFile.getAbsolutePath());
         ArArchiveOutputStream debianArchiveOutputStream = getDebianArchiveOutputStream(outputFile);
-        File controlFile = writeControl(debianArchiveOutputStream);
-        File dataFile = writeData(debianArchiveOutputStream);
+        File controlFile = writeControl();
+        File dataFile = writeData();
         writeDebianArchive(debianArchiveOutputStream, controlFile, dataFile);
     }
 
@@ -101,12 +107,12 @@ public class DebianPackage {
         }
     }
 
-    private File writeControl(ArArchiveOutputStream debianArchiveOutputStream) throws DebianPackageException {
-        return writeCompressedArchive(debianArchiveOutputStream, this.controlFiles);
+    private File writeControl() throws DebianPackageException {
+        return writeCompressedArchive(this.controlFiles);
     }
 
-    private File writeData(ArArchiveOutputStream debianArchiveOutputStream) throws DebianPackageException {
-        return writeCompressedArchive(debianArchiveOutputStream, this.dataFiles);
+    private File writeData() throws DebianPackageException {
+        return writeCompressedArchive(this.dataFiles);
     }
 
     private String getTarName(String path) {
@@ -116,7 +122,7 @@ public class DebianPackage {
         return path;
     }
 
-    private File writeCompressedArchive(ArArchiveOutputStream debianArchiveOutputStream,
+    private File writeCompressedArchive(
             Collection<ArchiveEntry> archiveEntries) throws DebianPackageException {
         CompressorOutputStream gzippedOutput = null;
         TarArchiveOutputStream tarOutput = null;
@@ -125,25 +131,7 @@ public class DebianPackage {
             outputFile.deleteOnExit();
             gzippedOutput = new CompressorStreamFactory().createCompressorOutputStream(CompressorStreamFactory.GZIP,
                     new FileOutputStream(outputFile));
-            tarOutput = new TarArchiveOutputStream(gzippedOutput);
-            for (ArchiveEntry fileEntry : archiveEntries) {
-                TarArchiveEntry entry = new TarArchiveEntry(getTarName(fileEntry.getName()));
-                if (ArchiveEntryType.F.equals(fileEntry.getType())) {
-                    if (fileEntry.getFile() == null) {
-                        throw new DebianPackageException(
-                                "Cannot write compressed archive, missing file for " + fileEntry.getName());
-                    }
-                    entry.setSize(fileEntry.getFile().length());
-                }
-                entry.setUserName(fileEntry.getUserName());
-                entry.setGroupName(fileEntry.getGroupName());
-                entry.setMode(fileEntry.getMode());
-                tarOutput.putArchiveEntry(entry);
-                if (ArchiveEntryType.F.equals(fileEntry.getType())) {
-                    copy(new FileInputStream(fileEntry.getFile()), tarOutput);
-                }
-                tarOutput.closeArchiveEntry();
-            }
+            tarOutput = writeTarArchive(archiveEntries, gzippedOutput);
             return outputFile;
         } catch (IOException e) {
             throw new DebianPackageException("Cannot write compressed archive", e);
@@ -154,9 +142,38 @@ public class DebianPackage {
                 try {
                     tarOutput.close();
                 } catch (IOException e) {
-                    // ignore
+                    this.logger.debug(e);
                 }
             }
+        }
+    }
+
+    private TarArchiveOutputStream writeTarArchive(Collection<ArchiveEntry> archiveEntries,
+            CompressorOutputStream gzippedOutput) throws DebianPackageException, IOException {
+        TarArchiveOutputStream tarOutput;
+        tarOutput = new TarArchiveOutputStream(gzippedOutput);
+        for (ArchiveEntry fileEntry : archiveEntries) {
+            TarArchiveEntry entry = new TarArchiveEntry(getTarName(fileEntry.getName()));
+            if (ArchiveEntryType.F.equals(fileEntry.getType())) {
+                checkContentsFile(fileEntry);
+                entry.setSize(fileEntry.getFile().length());
+            }
+            entry.setUserName(fileEntry.getUserName());
+            entry.setGroupName(fileEntry.getGroupName());
+            entry.setMode(fileEntry.getMode());
+            tarOutput.putArchiveEntry(entry);
+            if (ArchiveEntryType.F.equals(fileEntry.getType())) {
+                copy(new FileInputStream(fileEntry.getFile()), tarOutput);
+            }
+            tarOutput.closeArchiveEntry();
+        }
+        return tarOutput;
+    }
+
+    private void checkContentsFile(ArchiveEntry fileEntry) throws DebianPackageException {
+        if (fileEntry.getFile() == null) {
+            throw new DebianPackageException(
+                    "Cannot write compressed archive, missing file for " + fileEntry.getName());
         }
     }
 

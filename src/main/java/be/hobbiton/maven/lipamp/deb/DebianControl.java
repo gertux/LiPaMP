@@ -10,10 +10,12 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.maven.plugin.logging.Log;
 import org.codehaus.plexus.util.StringUtils;
 
 public class DebianControl {
@@ -21,6 +23,7 @@ public class DebianControl {
     private static final String FOLDED_FORMAT = " %s\n";
     private static final String SIMPLE_FIELD_FORMAT = "%s: %s\n";
     private static final String DECIMAL_FIELD_FORMAT = "%s: %d\n";
+    private Log logger;
     private String packageName;
     private String section;
     private String priority;
@@ -36,11 +39,12 @@ public class DebianControl {
     public DebianControl() {
     }
 
-    public DebianControl(File file) throws FileNotFoundException {
-        this(new FileInputStream(file));
+    public DebianControl(File file, Log logger) throws FileNotFoundException {
+        this(new FileInputStream(file), logger);
     }
 
-    public DebianControl(InputStream input) {
+    public DebianControl(InputStream input, Log logger) {
+        this.logger = logger;
         parseControlFile(input);
     }
 
@@ -50,45 +54,39 @@ public class DebianControl {
         }
         BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(output, StandardCharsets.UTF_8));
         try {
-            writer.write(
-                    String.format(SIMPLE_FIELD_FORMAT, DebianControlField.PACKAGE.getFieldname(), this.packageName));
-            writer.write(String.format(SIMPLE_FIELD_FORMAT, DebianControlField.VERSION.getFieldname(), this.version));
-            writer.write(String.format(SIMPLE_FIELD_FORMAT, DebianControlField.ARCHITECTURE.getFieldname(),
-                    this.architecture));
-            writer.write(
-                    String.format(SIMPLE_FIELD_FORMAT, DebianControlField.MAINTAINER.getFieldname(), this.maintainer));
-            writer.write(String.format(SIMPLE_FIELD_FORMAT, DebianControlField.DESCRIPTION.getFieldname(),
-                    this.descriptionSynopsis));
+            writeTextField(writer, DebianControlField.PACKAGE, this.packageName);
+            writeTextField(writer, DebianControlField.VERSION, this.version);
+            writeTextField(writer, DebianControlField.ARCHITECTURE, this.architecture);
+            writeTextField(writer, DebianControlField.MAINTAINER, this.maintainer);
+            writeTextField(writer, DebianControlField.DESCRIPTION, this.descriptionSynopsis);
             writer.write(String.format(FOLDED_FORMAT, this.description));
-            if (StringUtils.isNotBlank(this.section)) {
-                writer.write(
-                        String.format(SIMPLE_FIELD_FORMAT, DebianControlField.SECTION.getFieldname(), this.section));
-            }
-            if (StringUtils.isNotBlank(this.priority)) {
-                writer.write(
-                        String.format(SIMPLE_FIELD_FORMAT, DebianControlField.PRIORITY.getFieldname(), this.priority));
-            }
+            writeNotEmptyTextField(writer, DebianControlField.SECTION, this.section);
+            writeNotEmptyTextField(writer, DebianControlField.PRIORITY, this.priority);
             if (this.installedSize > INVALID_SIZE) {
                 writer.write(String.format(DECIMAL_FIELD_FORMAT, DebianControlField.INSTALLED_SIZE.getFieldname(),
                         this.installedSize));
             }
-            if (StringUtils.isNotBlank(this.depends)) {
-                writer.write(
-                        String.format(SIMPLE_FIELD_FORMAT, DebianControlField.DEPENDS.getFieldname(), this.depends));
-            }
-            if (StringUtils.isNotBlank(this.homepage)) {
-                writer.write(
-                        String.format(SIMPLE_FIELD_FORMAT, DebianControlField.HOMEPAGE.getFieldname(), this.homepage));
-            }
+            writeNotEmptyTextField(writer, DebianControlField.DEPENDS, this.depends);
+            writeNotEmptyTextField(writer, DebianControlField.HOMEPAGE, this.homepage);
         } catch (IOException e) {
             throw new DebianArchiveException("Could not write control file", e);
         } finally {
             try {
                 writer.close();
             } catch (IOException e) {
-                // ignore
+                this.logger.debug(e);
             }
         }
+    }
+
+    private void writeNotEmptyTextField(Writer writer, DebianControlField field, String value) throws IOException {
+        if (StringUtils.isNotBlank(value)) {
+            writeTextField(writer, field, value);
+        }
+    }
+
+    private void writeTextField(Writer writer, DebianControlField field, String value) throws IOException {
+        writer.write(String.format(SIMPLE_FIELD_FORMAT, field.getFieldname(), value));
     }
 
     public boolean isValid() {
@@ -97,7 +95,7 @@ public class DebianControl {
                 && StringUtils.isNotBlank(this.description) && StringUtils.isNotBlank(this.descriptionSynopsis);
     }
 
-    private final void parseControlFile(InputStream input) throws DebianArchiveException {
+    private final void parseControlFile(InputStream input) {
         BufferedReader reader = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8));
         String line = null;
         String fieldName = null;
@@ -105,20 +103,10 @@ public class DebianControl {
         try {
             while ((line = reader.readLine()) != null) {
                 if (line.charAt(0) == ' ' || line.charAt(0) == '\t') {
-                    if (values != null) {
-                        values.add(line.trim());
-                    } else {
-                        throw new DebianArchiveException(
-                                "Unable to read Control File continuation, unexpected line: " + line);
-                    }
+                    addContinuationLine(line, values);
                 } else {
                     String[] parts = line.split(":", 2);
-                    if (parts.length != 2 || parts[0].length() < 1) {
-                        throw new DebianArchiveException("Unable to read Control File, unexpected line: " + line);
-                    }
-                    if (fieldName != null) {
-                        saveControlField(fieldName, values);
-                    }
+                    addFieldValue(parts, fieldName, values);
                     fieldName = parts[0];
                     values = new ArrayList<String>();
                     values.add(parts[1].trim());
@@ -132,67 +120,96 @@ public class DebianControl {
         }
     }
 
+    private void addFieldValue(String[] parts, String fieldName, List<String> values) {
+        if (parts.length != 2 || parts[0].length() < 1) {
+            throw new DebianArchiveException("Unable to read Control File, unexpected line: " + parts);
+        }
+        if (fieldName != null) {
+            saveControlField(fieldName, values);
+        }
+    }
+
+    private void addContinuationLine(String line, List<String> values) {
+        if (values != null) {
+            values.add(line.trim());
+        } else {
+            throw new DebianArchiveException(
+                    "Unable to read Control File continuation, unexpected line: " + line);
+        }
+    }
+
+    private String readDescription(List<String> values) {
+        StringBuilder sb = new StringBuilder();
+        for (String value : values.subList(1, values.size())) {
+            if (sb.length() > 0) {
+                sb.append("\n");
+            }
+            sb.append(value);
+        }
+        return sb.toString();
+    }
+
     private final void saveControlField(String fieldName, List<String> values) {
         DebianControlField field = null;
         try {
             field = DebianControlField.fromFieldname(fieldName);
         } catch (IllegalArgumentException e) {
-            // ignore unknown field, TODO add warn logging
+            this.logger.warn("Unknown control field: " + fieldName);
+            if (this.logger.isDebugEnabled()) {
+                this.logger.debug(e);
+            }
             return;
         }
         if (DebianControlField.DESCRIPTION.equals(field)) {
             setDescriptionSynopsis(values.get(0));
             if (values.size() > 1) {
-                StringBuilder sb = new StringBuilder();
-                for (String value : values.subList(1, values.size())) {
-                    if (sb.length() > 0) {
-                        sb.append("\n");
-                    }
-                    sb.append(value);
-                }
-                setDescription(sb.toString());
+                setDescription(readDescription(values));
             }
         } else {
-            switch (field) {
-            case PACKAGE:
-                setPackageName(values.get(0));
-                break;
+            saveSimpleField(values, field);
+        }
+    }
 
-            case SECTION:
-                setSection(values.get(0));
-                break;
+    private void saveSimpleField(List<String> values, DebianControlField field) {
+        switch (field) {
+        case PACKAGE:
+            setPackageName(values.get(0));
+            break;
 
-            case PRIORITY:
-                setPriority(values.get(0));
-                break;
+        case SECTION:
+            setSection(values.get(0));
+            break;
 
-            case MAINTAINER:
-                setMaintainer(values.get(0));
-                break;
+        case PRIORITY:
+            setPriority(values.get(0));
+            break;
 
-            case INSTALLED_SIZE:
-                setInstalledSize(getLongValue(values.get(0)));
-                break;
+        case MAINTAINER:
+            setMaintainer(values.get(0));
+            break;
 
-            case VERSION:
-                setVersion(values.get(0));
-                break;
+        case INSTALLED_SIZE:
+            setInstalledSize(getLongValue(values.get(0)));
+            break;
 
-            case ARCHITECTURE:
-                setArchitecture(values.get(0));
-                break;
+        case VERSION:
+            setVersion(values.get(0));
+            break;
 
-            case DEPENDS:
-                setDepends(values.get(0));
-                break;
+        case ARCHITECTURE:
+            setArchitecture(values.get(0));
+            break;
 
-            case HOMEPAGE:
-                setHomepage(values.get(0));
-                break;
+        case DEPENDS:
+            setDepends(values.get(0));
+            break;
 
-            default:
-                break;
-            }
+        case HOMEPAGE:
+            setHomepage(values.get(0));
+            break;
+
+        default:
+            break;
         }
     }
 
@@ -298,12 +315,12 @@ public class DebianControl {
                         "Package"), DESCRIPTION("Description"), HOMEPAGE("Homepage");
         private final String fieldname;
 
-        public final String getFieldname() {
-            return this.fieldname;
-        }
-
         DebianControlField(String n) {
             this.fieldname = n;
+        }
+
+        public final String getFieldname() {
+            return this.fieldname;
         }
 
         public static DebianControlField fromFieldname(String n) {

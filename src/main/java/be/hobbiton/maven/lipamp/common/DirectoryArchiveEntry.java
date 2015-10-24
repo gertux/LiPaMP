@@ -7,5 +7,4 @@ public class DirectoryArchiveEntry extends ArchiveEntry {
         super(name.endsWith(DIR_SUFFIX) ? name : name + DIR_SUFFIX, null, userName, groupName, mode,
                 ArchiveEntryType.D);
     }
-
 }

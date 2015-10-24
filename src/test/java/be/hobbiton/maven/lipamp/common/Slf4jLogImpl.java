@@ -26,7 +26,6 @@ public class Slf4jLogImpl implements Log {
     public void debug(Throwable error) {
         LOGGER.debug("", error);
     }
-
     @Override
     public boolean isInfoEnabled() {
         return LOGGER.isInfoEnabled();

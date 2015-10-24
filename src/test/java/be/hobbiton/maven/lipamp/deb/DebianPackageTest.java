@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.apache.maven.plugin.logging.Log;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -19,6 +20,7 @@ import org.slf4j.LoggerFactory;
 import be.hobbiton.maven.lipamp.common.ArchiveEntry;
 import be.hobbiton.maven.lipamp.common.DirectoryArchiveEntry;
 import be.hobbiton.maven.lipamp.common.FileArchiveEntry;
+import be.hobbiton.maven.lipamp.common.Slf4jLogImpl;
 
 public class DebianPackageTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(DebianPackageTest.class);
@@ -26,6 +28,7 @@ public class DebianPackageTest {
     private static final String ROOT_USERNAME = "root";
     private static final List<File> CONTROL_FILES = new ArrayList<File>();
     private static final List<ArchiveEntry> DATA_FILES = new ArrayList<ArchiveEntry>();
+    private static final Log PLUGIN_LOGGER = new Slf4jLogImpl();
     private File outputFile;
 
     static {
@@ -63,29 +66,29 @@ public class DebianPackageTest {
 
     @Test(expected = IllegalArgumentException.class)
     public void testEmptyControl() throws Exception {
-        new DebianPackage(Collections.<File> emptyList(), DATA_FILES);
+        new DebianPackage(Collections.<File> emptyList(), DATA_FILES, PLUGIN_LOGGER);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void testNullControl() throws Exception {
-        new DebianPackage(null, DATA_FILES);
+        new DebianPackage(null, DATA_FILES, PLUGIN_LOGGER);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void testEmptyData() throws Exception {
-        new DebianPackage(CONTROL_FILES, Collections.<ArchiveEntry> emptyList());
+        new DebianPackage(CONTROL_FILES, Collections.<ArchiveEntry> emptyList(), PLUGIN_LOGGER);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void testNullData() throws Exception {
-        new DebianPackage(CONTROL_FILES, null);
+        new DebianPackage(CONTROL_FILES, null, PLUGIN_LOGGER);
     }
 
     @Test
     public void testFromFiles() throws Exception {
-        DebianPackage debPackage = new DebianPackage(CONTROL_FILES, DATA_FILES);
+        DebianPackage debPackage = new DebianPackage(CONTROL_FILES, DATA_FILES, PLUGIN_LOGGER);
         debPackage.write(this.outputFile);
-        DebInfo debianInfo = new DebInfo(this.outputFile);
+        DebInfo debianInfo = new DebInfo(this.outputFile, PLUGIN_LOGGER);
         LOGGER.debug(debianInfo.toString());
         assertEquals(3, debianInfo.getControlFiles().size());
         assertEquals(11, debianInfo.getDataFiles().size());

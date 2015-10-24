@@ -6,15 +6,19 @@ import static org.junit.Assert.*;
 import java.io.File;
 import java.io.FileOutputStream;
 
+import org.apache.maven.plugin.logging.Log;
 import org.codehaus.plexus.util.FileUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import be.hobbiton.maven.lipamp.common.Slf4jLogImpl;
+
 public class DebianControlTest {
     private static final File OUTPUT_DIR = new File("target/DebianControlTest");
     private static final File NEW_CONTROL_FILE = new File(OUTPUT_DIR, DebInfo.DebianInfoFile.CONTROL.getFilename());
     private static final String HOMEPAGE = "http://www.home.com";
+    private static final Log PLUGIN_LOGGER = new Slf4jLogImpl();
 
     @Before
     public void setUp() throws Exception {
@@ -31,7 +35,7 @@ public class DebianControlTest {
 
     @Test
     public void testFromFile() throws Exception {
-        DebianControl control = new DebianControl(CONTROL_FILE);
+        DebianControl control = new DebianControl(CONTROL_FILE, PLUGIN_LOGGER);
         assertEquals(FILE_PACKAGENAME, control.getPackageName());
         assertEquals(FILE_SECTION, control.getSection());
         assertEquals(FILE_PRIORITY, control.getPriority());
@@ -58,7 +62,7 @@ public class DebianControlTest {
         FileOutputStream fos = new FileOutputStream(NEW_CONTROL_FILE);
         debianControl.write(fos);
         fos.close();
-        DebianControl control = new DebianControl(NEW_CONTROL_FILE);
+        DebianControl control = new DebianControl(NEW_CONTROL_FILE, PLUGIN_LOGGER);
         assertEquals(FILE_PACKAGENAME, control.getPackageName());
         assertNull(control.getSection());
         assertNull(control.getPriority());
@@ -89,7 +93,7 @@ public class DebianControlTest {
         FileOutputStream fos = new FileOutputStream(NEW_CONTROL_FILE);
         debianControl.write(fos);
         fos.close();
-        DebianControl control = new DebianControl(NEW_CONTROL_FILE);
+        DebianControl control = new DebianControl(NEW_CONTROL_FILE, PLUGIN_LOGGER);
         assertEquals(FILE_PACKAGENAME, control.getPackageName());
         assertEquals(FILE_SECTION, control.getSection());
         assertEquals(FILE_PRIORITY, control.getPriority());

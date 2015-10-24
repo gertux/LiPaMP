@@ -273,7 +273,7 @@ public class DebianPackageMojo extends AbstractMojo {
             List<File> controlFiles = new ArrayList<File>();
             findFiles(packageBasedir, dataFilesCollector, controlFiles);
             File packageFile = getPackageFile();
-            DebianPackage debianPackage = new DebianPackage(controlFiles, dataFilesCollector.getEntries());
+            DebianPackage debianPackage = new DebianPackage(controlFiles, dataFilesCollector.getEntries(), getLog());
             debianPackage.write(packageFile);
             this.project.getArtifact().setFile(packageFile);
         } else {
@@ -306,18 +306,18 @@ public class DebianPackageMojo extends AbstractMojo {
     private String getMaintainerFromModel() {
         if (this.project.getDevelopers() != null && !this.project.getDevelopers().isEmpty()) {
             Developer dev = (Developer) this.project.getDevelopers().get(0);
-            StringBuilder maintainer = new StringBuilder();
+            StringBuilder maintainerFromModel = new StringBuilder();
             if (StringUtils.isNotBlank(dev.getName())) {
-                maintainer.append(dev.getName().trim());
+                maintainerFromModel.append(dev.getName().trim());
             }
             if (StringUtils.isNotBlank(dev.getEmail())) {
-                if (maintainer.length() > 0) {
-                    maintainer.append(" ");
+                if (maintainerFromModel.length() > 0) {
+                    maintainerFromModel.append(" ");
                 }
-                maintainer.append("<").append(dev.getEmail()).append(">");
+                maintainerFromModel.append("<").append(dev.getEmail()).append(">");
             }
-            if (maintainer.length() > 0) {
-                return maintainer.toString();
+            if (maintainerFromModel.length() > 0) {
+                return maintainerFromModel.toString();
             }
         }
         return System.getProperty("user.name");
@@ -325,76 +325,97 @@ public class DebianPackageMojo extends AbstractMojo {
 
     private void findFiles(File packageBasedir, ArchiveEntryCollector dataFilesCollector, Collection<File> controlFiles)
             throws MojoExecutionException, MojoFailureException {
-        boolean haveControl = false;
-        boolean haveConnffiles = false;
         Set<File> conffiles = new HashSet<File>();
+        ControlStatus controlStatus = new ControlStatus();
+        handleFiles(packageBasedir, dataFilesCollector, controlFiles, controlStatus);
+        if (this.artifacts != null && this.artifacts.length > 0) {
+            handleArtifacts(dataFilesCollector);
+        }
+        if (this.folders != null && this.folders.length > 0) {
+            handleFolders(dataFilesCollector);
+        }
+        if (this.attributes != null && this.attributes.length > 0) {
+            handleAttributes(dataFilesCollector, conffiles);
+        }
+        if (!controlStatus.haveControl()) {
+            controlFiles.add(generateControlFile(dataFilesCollector.getInstalledSize(), packageBasedir));
+        }
+        if (!controlStatus.haveConnffiles() && !conffiles.isEmpty()) {
+            controlFiles.add(generateConnffilesFile(conffiles, packageBasedir));
+        }
+    }
+
+    private void handleFiles(File packageBasedir, ArchiveEntryCollector dataFilesCollector,
+            Collection<File> controlFiles, ControlStatus controlStatus) {
         for (File file : packageBasedir.listFiles()) {
             if (CONFFILES_DIRNAME.equals(file.getName())) {
                 // add control files
-                for (File controlFile : file.listFiles()) {
-                    getLog().debug("Adding control " + controlFile.getAbsolutePath());
-                    if (CONTROL.getFilename().equals(controlFile.getName())) {
-                        haveControl = true;
-                    } else if (CONFFILES.getFilename().equals(controlFile.getName())) {
-                        haveConnffiles = true;
-                    }
-                    controlFiles.add(controlFile);
-                }
+                addControlFiles(controlFiles, controlStatus, file);
             } else {
                 addDataFile(dataFilesCollector, file, SLASH);
             }
         }
-        if (this.artifacts != null && this.artifacts.length > 0) {
-            for (ArtifactPackageEntry artifactEntry : this.artifacts) {
-                if (StringUtils.isNotBlank(artifactEntry.getDestination())) {
-                    Artifact depArtifact = getDependentArtifact(artifactEntry);
-                    File destFile = null;
-                    if (artifactEntry.getDestination().endsWith(SLASH)) {
-                        destFile = new File(cleanPath(artifactEntry.getDestination() + depArtifact.getArtifactId() + DOT
-                                + depArtifact.getType()));
-                    } else {
-                        destFile = new File(cleanPath(artifactEntry.getDestination()));
-                    }
-                    DirectoryArchiveEntry parentFolder = new DirectoryArchiveEntry(destFile.getParent(), null, null,
-                            ArchiveEntry.INVALID_MODE);
-                    dataFilesCollector.add(parentFolder);
-                    FileArchiveEntry fileEntry = new FileArchiveEntry(destFile.getPath(), depArtifact.getFile(),
-                            artifactEntry.getUsername(), artifactEntry.getGroupname(),
-                            getMode(artifactEntry.getMode(), destFile.getPath()));
-                    dataFilesCollector.add(fileEntry);
-                } else {
-                    throw new MojoFailureException("Invalid artifact destination specification");
-                }
+    }
+
+    private void handleAttributes(ArchiveEntryCollector dataFilesCollector, Set<File> conffiles)
+            throws MojoFailureException {
+        for (AttributeSelector attributeSelector : this.attributes) {
+            if (attributeSelector.isValid()) {
+                conffiles.addAll(dataFilesCollector.applyAttributes(attributeSelector.getExpression(),
+                        attributeSelector.getUsername(), attributeSelector.getGroupname(),
+                        getMode(attributeSelector.getMode(), attributeSelector.getExpression()),
+                        attributeSelector.isConfig()));
+            } else {
+                throw new MojoFailureException("Invalid attributes specification " + attributeSelector.toString());
             }
         }
-        if (this.folders != null && this.folders.length > 0) {
-            for (FolderEntry folder : this.folders) {
-                if (folder.isValid()) {
-                    DirectoryArchiveEntry parentFolder = new DirectoryArchiveEntry(folder.getPath(),
-                            folder.getUsername(), folder.getGroupname(), getMode(folder.getMode(), folder.getPath()));
-                    dataFilesCollector.add(parentFolder);
-                } else {
-                    throw new MojoFailureException("Invalid folder specification " + folder.toString());
-                }
+    }
+
+    private void handleFolders(ArchiveEntryCollector dataFilesCollector) throws MojoFailureException {
+        for (FolderEntry folder : this.folders) {
+            if (folder.isValid()) {
+                DirectoryArchiveEntry parentFolder = new DirectoryArchiveEntry(folder.getPath(),
+                        folder.getUsername(), folder.getGroupname(), getMode(folder.getMode(), folder.getPath()));
+                dataFilesCollector.add(parentFolder);
+            } else {
+                throw new MojoFailureException("Invalid folder specification " + folder.toString());
             }
         }
-        if (this.attributes != null && this.attributes.length > 0) {
-            for (AttributeSelector attributeSelector : this.attributes) {
-                if (attributeSelector.isValid()) {
-                    conffiles.addAll(dataFilesCollector.applyAttributes(attributeSelector.getExpression(),
-                            attributeSelector.getUsername(), attributeSelector.getGroupname(),
-                            getMode(attributeSelector.getMode(), attributeSelector.getExpression()),
-                            attributeSelector.isConfig()));
+    }
+
+    private void handleArtifacts(ArchiveEntryCollector dataFilesCollector) throws MojoFailureException {
+        for (ArtifactPackageEntry artifactEntry : this.artifacts) {
+            if (StringUtils.isNotBlank(artifactEntry.getDestination())) {
+                Artifact depArtifact = getDependentArtifact(artifactEntry);
+                File destFile = null;
+                if (artifactEntry.getDestination().endsWith(SLASH)) {
+                    destFile = new File(cleanPath(artifactEntry.getDestination() + depArtifact.getArtifactId() + DOT
+                            + depArtifact.getType()));
                 } else {
-                    throw new MojoFailureException("Invalid attributes specification " + attributeSelector.toString());
+                    destFile = new File(cleanPath(artifactEntry.getDestination()));
                 }
+                DirectoryArchiveEntry parentFolder = new DirectoryArchiveEntry(destFile.getParent(), null, null,
+                        ArchiveEntry.INVALID_MODE);
+                dataFilesCollector.add(parentFolder);
+                FileArchiveEntry fileEntry = new FileArchiveEntry(destFile.getPath(), depArtifact.getFile(),
+                        artifactEntry.getUsername(), artifactEntry.getGroupname(),
+                        getMode(artifactEntry.getMode(), destFile.getPath()));
+                dataFilesCollector.add(fileEntry);
+            } else {
+                throw new MojoFailureException("Invalid artifact destination specification");
             }
         }
-        if (!haveControl) {
-            controlFiles.add(generateControlFile(dataFilesCollector.getInstalledSize(), packageBasedir));
-        }
-        if (!haveConnffiles && !conffiles.isEmpty()) {
-            controlFiles.add(generateConnffilesFile(conffiles, packageBasedir));
+    }
+
+    private void addControlFiles(Collection<File> controlFiles, ControlStatus controlStatus, File file) {
+        for (File controlFile : file.listFiles()) {
+            getLog().debug("Adding control " + controlFile.getAbsolutePath());
+            if (CONTROL.getFilename().equals(controlFile.getName())) {
+                controlStatus.setHaveControl();
+            } else if (CONFFILES.getFilename().equals(controlFile.getName())) {
+                controlStatus.setHaveConnffiles();
+            }
+            controlFiles.add(controlFile);
         }
     }
 
@@ -428,19 +449,28 @@ public class DebianPackageMojo extends AbstractMojo {
     }
 
     private Artifact getDependentArtifact(ArtifactPackageEntry artifactEntry) throws MojoFailureException {
+        Artifact dependentArtifact = null;
         if (artifactEntry.isValid()) {
             if (this.project.getDependencyArtifacts() != null) {
-                for (Object depObj : this.project.getDependencyArtifacts()) {
-                    Artifact depArtifact = (Artifact) depObj;
-                    if (artifactEntry.compareTo(depArtifact) == 0) {
-                        return depArtifact;
-                    }
-                }
+                dependentArtifact = findDependentArtifact(artifactEntry);
             }
         } else {
             throw new MojoFailureException("Invalid artifact specification");
         }
+        if (dependentArtifact != null) {
+            return dependentArtifact;
+        }
         throw new MojoFailureException(String.format("Artifact %s not found", artifactEntry.toString()));
+    }
+
+    private Artifact findDependentArtifact(ArtifactPackageEntry artifactEntry) {
+        for (Object depObj : this.project.getDependencyArtifacts()) {
+            Artifact depArtifact = (Artifact) depObj;
+            if (artifactEntry.matches(depArtifact)) {
+                return depArtifact;
+            }
+        }
+        return null;
     }
 
     private String cleanPath(String path) {
@@ -506,21 +536,17 @@ public class DebianPackageMojo extends AbstractMojo {
 
     private File getValidConfigResourcesDir(File packageBasedir) throws MojoExecutionException {
         File debianConffilesDir = new File(packageBasedir, CONFFILES_DIRNAME);
-        if (!debianConffilesDir.isDirectory()) {
-            if (!debianConffilesDir.mkdirs()) {
-                throw new MojoExecutionException(
-                        "Unable to create debian resources directory: " + debianConffilesDir.getAbsolutePath());
-            }
+        if (!debianConffilesDir.isDirectory() && !debianConffilesDir.mkdirs()) {
+            throw new MojoExecutionException(
+                    "Unable to create debian resources directory: " + debianConffilesDir.getAbsolutePath());
         }
         return debianConffilesDir;
     }
 
     private File getValidOutputDir() throws MojoExecutionException {
-        if (!this.outputDirectory.isDirectory()) {
-            if (!this.outputDirectory.mkdirs()) {
-                throw new MojoExecutionException(
-                        "Unable to create output directory: " + this.outputDirectory.getAbsolutePath());
-            }
+        if (!this.outputDirectory.isDirectory() && !this.outputDirectory.mkdirs()) {
+            throw new MojoExecutionException(
+                    "Unable to create output directory: " + this.outputDirectory.getAbsolutePath());
         }
         return this.outputDirectory;
     }
@@ -646,5 +672,26 @@ public class DebianPackageMojo extends AbstractMojo {
 
     public void setResourcesDirectory(File resourcesDirectory) {
         this.resourcesDirectory = resourcesDirectory;
+    }
+
+    private static class ControlStatus {
+        boolean haveControl = false;
+        boolean haveConnffiles = false;
+
+        public boolean haveControl() {
+            return this.haveControl;
+        }
+
+        public void setHaveControl() {
+            this.haveControl = true;
+        }
+
+        public boolean haveConnffiles() {
+            return this.haveConnffiles;
+        }
+
+        public void setHaveConnffiles() {
+            this.haveConnffiles = true;
+        }
     }
 }

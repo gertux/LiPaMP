@@ -36,4 +36,15 @@ public class AttributeSelectorTest {
         assertFalse(new AttributeSelector(null, USERNAME, GROUPNAME, MODE, true).isValid());
         assertFalse(new AttributeSelector(null, USERNAME, GROUPNAME, MODE, true).isValid());
     }
+
+    @Test
+    public void testMiscValid() {
+        AttributeSelector entry = new AttributeSelector();
+        assertFalse(entry.isValid());
+        entry.setExpression(EXPRESSION);
+        assertFalse(entry.isValid());
+        entry.setConfig(true);
+        assertTrue(entry.isValid());
+        assertTrue(entry.toString().contains(EXPRESSION));
+    }
 }

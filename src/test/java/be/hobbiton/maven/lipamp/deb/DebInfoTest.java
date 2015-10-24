@@ -10,18 +10,21 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.apache.maven.plugin.logging.Log;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import be.hobbiton.maven.lipamp.common.Slf4jLogImpl;
 
 public class DebInfoTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(DebInfoTest.class);
+    private static final Log PLUGIN_LOGGER = new Slf4jLogImpl();
     private File packageFile = new File("src/test/data/hiapp-pkg-1.0.0.deb");
 
     @Test
     public void testGetInfo() throws DebianArchiveException {
-        DebInfo debInfo = new DebInfo(this.packageFile);
+        DebInfo debInfo = new DebInfo(this.packageFile, PLUGIN_LOGGER);
         LOGGER.debug(debInfo.toString());
         DebInfoTest.assertControl(debInfo,
                 new String[] { CONFFILES.getFilename(), CONTROL.getFilename(), POST_INSTALL.getFilename() });
