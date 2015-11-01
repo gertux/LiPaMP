@@ -31,6 +31,7 @@ public class ArchiveEntryCollectorTest {
 
     @Test
     public void testAddLeafFile() {
+        assertTrue(this.collector.isEmpty());
         this.collector.add(new FileArchiveEntry("/etc/init/app.conf", LEAF_FILE, LEAF_USER, LEAF_GROUP, LEAF_MODE));
         Collection<ArchiveEntry> entries = this.collector.getEntries();
         assertEquals(4, entries.size());
@@ -49,6 +50,7 @@ public class ArchiveEntryCollectorTest {
         assertLeafFolder(afterAttsIterator.next(), "/etc/");
         assertLeafFolder(afterAttsIterator.next(), "/etc/init/");
         assertLeafFile(afterAttsIterator.next(), "/etc/init/app.conf");
+        assertFalse(this.collector.isEmpty());
     }
 
     @Test(expected = IllegalArgumentException.class)

@@ -142,4 +142,8 @@ public class ArchiveEntryCollector {
     public long getInstalledSize() {
         return this.installedSize;
     }
+
+    public boolean isEmpty() {
+        return this.entries.isEmpty();
+    }
 }

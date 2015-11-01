@@ -267,18 +267,26 @@ public class DebianPackageMojo extends AbstractMojo {
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
+        ArchiveEntryCollector dataFilesCollector = new ArchiveEntryCollector();
+        List<File> controlFiles = new ArrayList<File>();
+        findFiles(getPackageBaseDir(), dataFilesCollector, controlFiles);
+        File packageFile = getPackageFile();
+        DebianPackage debianPackage = new DebianPackage(controlFiles, dataFilesCollector.getEntries(), getLog());
+        debianPackage.write(packageFile);
+        this.project.getArtifact().setFile(packageFile);
+    }
+
+    private File getPackageBaseDir() throws MojoExecutionException {
         File packageBasedir = new File(this.resourcesDirectory, DEBIAN_RESOURCES_DIRNAME);
-        if (packageBasedir.isDirectory()) {
-            ArchiveEntryCollector dataFilesCollector = new ArchiveEntryCollector();
-            List<File> controlFiles = new ArrayList<File>();
-            findFiles(packageBasedir, dataFilesCollector, controlFiles);
-            File packageFile = getPackageFile();
-            DebianPackage debianPackage = new DebianPackage(controlFiles, dataFilesCollector.getEntries(), getLog());
-            debianPackage.write(packageFile);
-            this.project.getArtifact().setFile(packageFile);
-        } else {
-            throw new MojoFailureException("Missing package base directory");
+        if (!packageBasedir.isDirectory()) {
+            if (packageBasedir.exists()) {
+                throw new MojoExecutionException(packageBasedir.getAbsolutePath() + " exists but is no directory");
+            }
+            if (!packageBasedir.mkdirs()) {
+                throw new MojoExecutionException("Failed to create " + packageBasedir.getAbsolutePath());
+            }
         }
+        return packageBasedir;
     }
 
     protected File getPackageFile() throws MojoExecutionException {
@@ -343,6 +351,9 @@ public class DebianPackageMojo extends AbstractMojo {
         if (!controlStatus.haveConnffiles() && !conffiles.isEmpty()) {
             controlFiles.add(generateConnffilesFile(conffiles, packageBasedir));
         }
+        if (dataFilesCollector.isEmpty()) {
+            throw new MojoFailureException("Useless build, nothing to package");
+        }
     }
 
     private void handleFiles(File packageBasedir, ArchiveEntryCollector dataFilesCollector,
@@ -374,8 +385,8 @@ public class DebianPackageMojo extends AbstractMojo {
     private void handleFolders(ArchiveEntryCollector dataFilesCollector) throws MojoFailureException {
         for (FolderEntry folder : this.folders) {
             if (folder.isValid()) {
-                DirectoryArchiveEntry parentFolder = new DirectoryArchiveEntry(folder.getPath(),
-                        folder.getUsername(), folder.getGroupname(), getMode(folder.getMode(), folder.getPath()));
+                DirectoryArchiveEntry parentFolder = new DirectoryArchiveEntry(folder.getPath(), folder.getUsername(),
+                        folder.getGroupname(), getMode(folder.getMode(), folder.getPath()));
                 dataFilesCollector.add(parentFolder);
             } else {
                 throw new MojoFailureException("Invalid folder specification " + folder.toString());

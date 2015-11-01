@@ -97,8 +97,6 @@ public class DebianPackageMojoTest {
     public void setUp() throws Exception {
         tearDown();
         assertTrue(RESOURCES_DIR.mkdirs());
-        FileUtils.copyDirectoryStructure(new File(BASEDIR, DEBIAN_RESOURCES_DIRNAME),
-                new File(RESOURCES_DIR, DEBIAN_RESOURCES_DIRNAME));
         this.model = new Model();
         this.model.setArtifactId(ARTIFACTID);
         this.model.setGroupId(GROUPID);
@@ -135,6 +133,8 @@ public class DebianPackageMojoTest {
 
     @Test
     public void testExecuteDefault() throws Exception {
+        FileUtils.copyDirectoryStructure(new File(BASEDIR, DEBIAN_RESOURCES_DIRNAME),
+                new File(RESOURCES_DIR, DEBIAN_RESOURCES_DIRNAME));
         ArtifactRepositoryLayout layout = new DefaultRepositoryLayout();
         LOGGER.debug("PATH = {}", layout.pathOf(DEP_ARTIFACT));
         this.project.setFile(PROJECT_FILE);
@@ -158,6 +158,8 @@ public class DebianPackageMojoTest {
 
     @Test
     public void testExecuteWithAtts() throws Exception {
+        FileUtils.copyDirectoryStructure(new File(BASEDIR, DEBIAN_RESOURCES_DIRNAME),
+                new File(RESOURCES_DIR, DEBIAN_RESOURCES_DIRNAME));
         AttributeSelector[] attributeSelectors = new AttributeSelector[] {
                 new AttributeSelector("/**", ART_USER, ART_GROUP, CONFIGMODE, false) };
         this.project.setFile(PROJECT_FILE);
@@ -180,6 +182,8 @@ public class DebianPackageMojoTest {
 
     @Test
     public void testExecuteWithFolders() throws Exception {
+        FileUtils.copyDirectoryStructure(new File(BASEDIR, DEBIAN_RESOURCES_DIRNAME),
+                new File(RESOURCES_DIR, DEBIAN_RESOURCES_DIRNAME));
         this.project.setFile(PROJECT_FILE);
         this.mojo.setFolders(FOLDERS);
         this.mojo.execute();
@@ -199,6 +203,8 @@ public class DebianPackageMojoTest {
 
     @Test
     public void testExecuteFull() throws Exception {
+        FileUtils.copyDirectoryStructure(new File(BASEDIR, DEBIAN_RESOURCES_DIRNAME),
+                new File(RESOURCES_DIR, DEBIAN_RESOURCES_DIRNAME));
         this.model.setDevelopers(DEVELOPERS);
         assertTrue(new File(RESOURCES_DIR, CONTROL_PATH).delete());
         this.mojo.setFolders(FOLDERS);
@@ -232,6 +238,8 @@ public class DebianPackageMojoTest {
 
     @Test
     public void testExecuteWithArtifact() throws Exception {
+        FileUtils.copyDirectoryStructure(new File(BASEDIR, DEBIAN_RESOURCES_DIRNAME),
+                new File(RESOURCES_DIR, DEBIAN_RESOURCES_DIRNAME));
         this.project.setFile(PROJECT_FILE);
         Set<Artifact> deps = new HashSet<Artifact>();
         deps.add(DEP_ARTIFACT);
@@ -255,6 +263,8 @@ public class DebianPackageMojoTest {
 
     @Test(expected = MojoFailureException.class)
     public void testExecuteWithArtifactDepNotFound() throws Exception {
+        FileUtils.copyDirectoryStructure(new File(BASEDIR, DEBIAN_RESOURCES_DIRNAME),
+                new File(RESOURCES_DIR, DEBIAN_RESOURCES_DIRNAME));
         this.project.setFile(PROJECT_FILE);
         this.mojo.setArtifacts(ARTIFACTS);
         this.mojo.execute();
@@ -262,6 +272,8 @@ public class DebianPackageMojoTest {
 
     @Test(expected = MojoFailureException.class)
     public void testExecuteWithArtifactDepWrongType() throws Exception {
+        FileUtils.copyDirectoryStructure(new File(BASEDIR, DEBIAN_RESOURCES_DIRNAME),
+                new File(RESOURCES_DIR, DEBIAN_RESOURCES_DIRNAME));
         this.project.setFile(PROJECT_FILE);
         Set<Artifact> deps = new HashSet<Artifact>();
         DefaultArtifact depArtifact = new DefaultArtifact(DEP_GROUPID, DEP_ARTIFACTID, DEP_VERSION, "compile", "war",
@@ -275,6 +287,8 @@ public class DebianPackageMojoTest {
 
     @Test
     public void testExecuteChangeFolderAttributes() throws Exception {
+        FileUtils.copyDirectoryStructure(new File(BASEDIR, DEBIAN_RESOURCES_DIRNAME),
+                new File(RESOURCES_DIR, DEBIAN_RESOURCES_DIRNAME));
         this.project.setFile(PROJECT_FILE);
         this.mojo.setFolders(new FolderEntry[] { new FolderEntry(CONFIG_FOLDERNAME, CONFIGUSER, CONFIGGROUP, null) });
         this.mojo.execute();
@@ -295,6 +309,8 @@ public class DebianPackageMojoTest {
 
     @Test
     public void testExecuteChangeFolderModeAttribute() throws Exception {
+        FileUtils.copyDirectoryStructure(new File(BASEDIR, DEBIAN_RESOURCES_DIRNAME),
+                new File(RESOURCES_DIR, DEBIAN_RESOURCES_DIRNAME));
         this.project.setFile(PROJECT_FILE);
         this.mojo.setFolders(new FolderEntry[] { new FolderEntry(CONFIG_FOLDERNAME + "/", null, null, CONFIGMODE) });
         this.mojo.execute();
@@ -315,6 +331,8 @@ public class DebianPackageMojoTest {
 
     @Test
     public void testExecuteNoControl() throws Exception {
+        FileUtils.copyDirectoryStructure(new File(BASEDIR, DEBIAN_RESOURCES_DIRNAME),
+                new File(RESOURCES_DIR, DEBIAN_RESOURCES_DIRNAME));
         assertTrue(new File(RESOURCES_DIR, CONTROL_PATH).delete());
         this.mojo.execute();
         DebInfo debianInfo = new DebInfo(this.project.getArtifact().getFile(), PLUGIN_LOGGER);
@@ -343,6 +361,8 @@ public class DebianPackageMojoTest {
 
     @Test
     public void testExecuteNoControlAllParametersSet() throws Exception {
+        FileUtils.copyDirectoryStructure(new File(BASEDIR, DEBIAN_RESOURCES_DIRNAME),
+                new File(RESOURCES_DIR, DEBIAN_RESOURCES_DIRNAME));
         assertTrue(new File(RESOURCES_DIR, CONTROL_PATH).delete());
         this.mojo.setPackageName(CUSTOM_PACKAGENAME);
         this.mojo.setVersion(CUSTOM_VERSION);
@@ -374,6 +394,8 @@ public class DebianPackageMojoTest {
 
     @Test
     public void testExecuteNoConfig() throws Exception {
+        FileUtils.copyDirectoryStructure(new File(BASEDIR, DEBIAN_RESOURCES_DIRNAME),
+                new File(RESOURCES_DIR, DEBIAN_RESOURCES_DIRNAME));
         assertTrue(new File(RESOURCES_DIR, CONTROL_PATH).delete());
         assertTrue(new File(RESOURCES_DIR, CONFFILES_PATH).delete());
         this.mojo.execute();
@@ -391,6 +413,8 @@ public class DebianPackageMojoTest {
 
     @Test
     public void testExecuteNoConfigAtt() throws Exception {
+        FileUtils.copyDirectoryStructure(new File(BASEDIR, DEBIAN_RESOURCES_DIRNAME),
+                new File(RESOURCES_DIR, DEBIAN_RESOURCES_DIRNAME));
         assertTrue(new File(RESOURCES_DIR, CONTROL_PATH).delete());
         assertTrue(new File(RESOURCES_DIR, CONFFILES_PATH).delete());
         AttributeSelector[] attributeSelectors = new AttributeSelector[] {
@@ -413,10 +437,32 @@ public class DebianPackageMojoTest {
     }
 
     @Test(expected = MojoFailureException.class)
-    public void testNoPackageBasedir() throws Exception {
-        this.mojo.setResourcesDirectory(new File("src/test/data/src/main/deb"));
+    public void testNothingToPackage() throws Exception {
         this.mojo.execute();
     }
+
+    @Test
+    public void testExecuteOnlyArtifact() throws Exception {
+        this.project.setFile(PROJECT_FILE);
+        Set<Artifact> deps = new HashSet<Artifact>();
+        deps.add(DEP_ARTIFACT);
+        this.project.setDependencyArtifacts(deps);
+        this.mojo.setArtifacts(ARTIFACTS);
+        this.mojo.execute();
+        DebInfo debianInfo = new DebInfo(this.project.getArtifact().getFile(), PLUGIN_LOGGER);
+        LOGGER.debug(debianInfo.toString());
+        DebInfoTest.assertControl(debianInfo, new String[] { CONTROL.getFilename() });
+        assertEquals(4, debianInfo.getDataFiles().size());
+        assertInPackage(debianInfo, DEP_FILEPATH, ART_USER, ART_GROUP, CONFIGMODE_VALUE);
+        assertEquals(ARTIFACTID, debianInfo.getControl().getPackageName());
+        assertEquals(VERSION, debianInfo.getControl().getVersion());
+        assertEquals(DEFAULT_ARCHITECTURE, debianInfo.getControl().getArchitecture());
+        assertEquals(SYSTEM_USERNAME, debianInfo.getControl().getMaintainer());
+        assertEquals(NAME, debianInfo.getControl().getDescriptionSynopsis());
+        assertEquals(DESCRIPTION, debianInfo.getControl().getDescription());
+        assertEquals(3, debianInfo.getControl().getInstalledSize());
+    }
+
 
     @Test
     public void testGetReleasedVersion() {
