@@ -270,6 +270,9 @@ public class DebianPackageMojo extends AbstractMojo {
         ArchiveEntryCollector dataFilesCollector = new ArchiveEntryCollector();
         List<File> controlFiles = new ArrayList<File>();
         findFiles(getPackageBaseDir(), dataFilesCollector, controlFiles);
+        if (dataFilesCollector.isEmpty()) {
+            throw new MojoFailureException("Useless build, nothing to package");
+        }
         File packageFile = getPackageFile();
         DebianPackage debianPackage = new DebianPackage(controlFiles, dataFilesCollector.getEntries(), getLog());
         debianPackage.write(packageFile);
@@ -350,9 +353,6 @@ public class DebianPackageMojo extends AbstractMojo {
         }
         if (!controlStatus.haveConnffiles() && !conffiles.isEmpty()) {
             controlFiles.add(generateConnffilesFile(conffiles, packageBasedir));
-        }
-        if (dataFilesCollector.isEmpty()) {
-            throw new MojoFailureException("Useless build, nothing to package");
         }
     }
 
