@@ -19,7 +19,7 @@ Debian example
 
 +---
   pom.xml
-  +--- src/main/deb/
+  +--- src/main/resources/deb/
       +--- DEBIAN/
       |   +--- preinst
       +--- etc/
