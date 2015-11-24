@@ -153,37 +153,38 @@ Debian example
   The resulting Debian package:
   
 +---
-$ dpkg-deb -I hiapp-1.0.0-SNAPSHOT.deb 
- new debian package, version 2.0.
- size 320672 bytes: control archive=543 bytes.
-      36 bytes,     1 line       conffiles            
-     227 bytes,     6 lines      control              
-     280 bytes,    17 lines      preinst             #!/bin/sh
- Package: hiapp
- Version: 1.0.0-20151019011349
- Architecture: all
- Maintainer: Sam <sam@hobbiton.be>
- Installed-Size: 380
- Description: Cloud hi server
-  Cloud hi server - Non Secure Implementation
+$ mvn be.hobbiton.maven:linux-packaging-maven-plugin:info -Dfile=target/hiapp-1.0.0-SNAPSHOT.deb
+Package: hiapp
+Version: 1.0.0-20151019011349
+Architecture: all
+Maintainer: Sam <sam@hobbiton.be>
+Installed-Size: 380
+Description: Cloud hi server
+ Cloud hi server - Non Secure Implementation
+
+Control files:
+conffiles
+control
+preinst
+
+Configuration files:
+/etc/hiapp/hiapp.properties
+
+Data files:
+drwxr-xr-x     root/root         0 ./etc/
+drwxr-xr-x     root/root         0 ./etc/hiapp/
+-rw-r-----     root/hiapp       52 ./etc/hiapp/hiapp.properties
+drwxr-xr-x     root/root         0 ./etc/init/
+-rw-r--r--     root/root       421 ./etc/init/hiapp.conf
+drwxr-xr-x     root/root         0 ./opt/
+drwxr-xr-x     root/root         0 ./opt/hiapp/
+-rw-r--r--     root/root    378787 ./opt/hiapp/hiapp.jar
+drwxr-xr-x     root/root         0 ./var/
+drwxr-xr-x     root/root         0 ./var/log/
+drwxr-xr-x    hiapp/root         0 ./var/log/hiapp/
 +---  
 
   The fields in the package are derived from the standard pom field where sensible.
-
-+---
-$ dpkg-deb -c hiapp-1.0.0-SNAPSHOT.deb 
-drwxr-xr-x root/root         0 2015-10-19 01:13 ./etc/
-drwxr-xr-x root/root         0 2015-10-19 01:13 ./etc/hiapp/
--rw-r----- root/hiapp       52 2015-10-19 01:13 ./etc/hiapp/hiapp.properties
-drwxr-xr-x root/root         0 2015-10-19 01:13 ./etc/init/
--rw-r--r-- root/root       421 2015-10-19 01:13 ./etc/init/hiapp.conf
-drwxr-xr-x root/root         0 2015-10-19 01:13 ./opt/
-drwxr-xr-x root/root         0 2015-10-19 01:13 ./opt/hiapp/
--rw-r--r-- root/root    378787 2015-10-19 01:13 ./opt/hiapp/hiapp.jar
-drwxr-xr-x root/root         0 2015-10-19 01:13 ./var/
-drwxr-xr-x root/root         0 2015-10-19 01:13 ./var/log/
-drwxr-xr-x hiapp/root        0 2015-10-19 01:13 ./var/log/hiapp/
-+---
 
   The usernames, groups and permissions are all defaults except for the username of 
   the owner of the <<</var/log/hiapp>>> folder and the group name of the 

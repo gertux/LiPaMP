@@ -38,6 +38,7 @@ import be.hobbiton.maven.lipamp.deb.DebianPackage;
  * <p>
  * Binds to the package lifecycle phase for artifacts of type deb
  *
+ * @author <a href="mailto:gert@hobbiton.be">Gert Dewit</a>
  * @since 1.0.0
  */
 @Mojo(name = "makedeb", requiresProject = true, requiresDependencyResolution = ResolutionScope.COMPILE)
