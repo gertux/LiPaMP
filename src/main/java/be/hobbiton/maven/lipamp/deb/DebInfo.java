@@ -128,8 +128,10 @@ public class DebInfo {
                     this.dataFiles.add(new DirectoryArchiveEntry(tarEntry.getName(), tarEntry.getUserName(),
                             tarEntry.getGroupName(), tarEntry.getMode()));
                 } else if (tarEntry.isFile()) {
-                    this.dataFiles.add(new FileArchiveEntry(tarEntry.getName(), new File(tarEntry.getName()),
-                            tarEntry.getUserName(), tarEntry.getGroupName(), tarEntry.getMode()));
+                    FileArchiveEntry fileEntry = new FileArchiveEntry(tarEntry.getName(), new File(tarEntry.getName()),
+                            tarEntry.getUserName(), tarEntry.getGroupName(), tarEntry.getMode());
+                    fileEntry.setSize(tarEntry.getSize());
+                    this.dataFiles.add(fileEntry);
                 }
                 tarEntry = tar.getNextTarEntry();
             }
@@ -197,8 +199,8 @@ public class DebInfo {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append(DebianControlField.PACKAGE.getFieldname()).append(": ").append(this.control.getPackageName())
-        .append(LINEFEED);
+        sb.append(LINEFEED).append(DebianControlField.PACKAGE.getFieldname()).append(": ")
+        .append(this.control.getPackageName()).append(LINEFEED);
         if (StringUtils.isNotBlank(this.control.getSection())) {
             sb.append(DebianControlField.SECTION.getFieldname()).append(": ").append(this.control.getSection())
             .append(LINEFEED);

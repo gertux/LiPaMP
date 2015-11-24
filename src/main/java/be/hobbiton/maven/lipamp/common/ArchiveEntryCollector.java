@@ -66,9 +66,7 @@ public class ArchiveEntryCollector {
                     (newEntry.getType().equals(ArchiveEntryType.D)) ? this.defaultDirmode : this.defaultFilemode);
         }
         this.entries.put(newEntry.getName(), newEntry);
-        if (newEntry.getFile() != null && newEntry.getFile().isFile()) {
-            this.installedSize += newEntry.getFile().length();
-        }
+        this.installedSize += newEntry.getSize();
     }
 
     private void handleExistingEntry(ArchiveEntry existingEntry, ArchiveEntry newEntry) {

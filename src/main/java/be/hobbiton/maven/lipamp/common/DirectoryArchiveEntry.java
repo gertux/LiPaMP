@@ -6,5 +6,6 @@ public class DirectoryArchiveEntry extends ArchiveEntry {
     public DirectoryArchiveEntry(String name, String userName, String groupName, int mode) {
         super(name.endsWith(DIR_SUFFIX) ? name : name + DIR_SUFFIX, null, userName, groupName, mode,
                 ArchiveEntryType.D);
+        setSize(0);
     }
 }
