@@ -5,6 +5,7 @@ import java.io.File;
 import org.codehaus.plexus.util.StringUtils;
 
 public class ArchiveEntry {
+    private static char[] OCHARS = { 'r', 'x', 'w' };
     public static final int INVALID_MODE = -1;
     public static final long INVALID_SIZE = -1L;
     private String name;
@@ -77,26 +78,25 @@ public class ArchiveEntry {
         F('-'), D('d'), L('-'), S('l');
         private char rep;
 
+        ArchiveEntryType(char rep) {
+            this.rep = rep;
+        }
+
         public char getRep() {
             return this.rep;
         }
 
-        ArchiveEntryType(char rep) {
-            this.rep = rep;
-        }
     }
 
     public boolean isValid() {
         return StringUtils.isNotBlank(this.name);
     }
 
-    private static char[] OCHARS = { 'r', 'x', 'w' };
-
     protected static String getModeString(ArchiveEntryType type, int mode) {
         StringBuilder sb = new StringBuilder();
         sb.append(type.getRep());
         for (int i = 9; i > 0; i--) {
-            char oChar = OCHARS[(i % 3)];
+            char oChar = OCHARS[i % 3];
             int mask = 1 << (i - 1);
             sb.append((mode & mask) > 0 ? oChar : '-');
         }
