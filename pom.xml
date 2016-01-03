@@ -43,7 +43,7 @@
 	<distributionManagement>
 		<site>
 			<id>www.hobbiton.be</id>
-			<url>scpexe://aragorn.hobbiton.be/var/www/html/docs/${project.artifactId}/${project.version}/</url>
+			<url>scpexe://faramir.hobbiton.be/var/www/html/docs/${project.artifactId}/${project.version}/</url>
 		</site>
 	</distributionManagement>
 
