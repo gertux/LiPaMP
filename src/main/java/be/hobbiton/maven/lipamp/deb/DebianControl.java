@@ -108,7 +108,7 @@ public class DebianControl {
                     String[] parts = line.split(":", 2);
                     addFieldValue(parts, fieldName, values);
                     fieldName = parts[0];
-                    values = new ArrayList<String>();
+                    values = new ArrayList<>();
                     values.add(parts[1].trim());
                 }
             }

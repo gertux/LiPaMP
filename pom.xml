@@ -16,8 +16,12 @@
 	<description>Linux Packaging Maven Plugin</description>
 	<url>http://www.hobbiton.be/docs/${project.artifactId}/${project.version}/</url>
 	<prerequisites>
-		<maven>2.2.1</maven>
+		<maven>3.0.5</maven>
 	</prerequisites>
+	<properties>
+		<java.version>1.8</java.version>
+		<maven.required.version>3.0.5</maven.required.version>
+	</properties>
 	<issueManagement>
 		<system>GitHub</system>
 		<url>https://github.com/gertux/LiPaMP/issues</url>
@@ -188,6 +192,10 @@
 		<pluginManagement>
 			<plugins>
 				<plugin>
+					<artifactId>maven-compiler-plugin</artifactId>
+					<version>3.3</version>
+				</plugin>
+				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-site-plugin</artifactId>
 					<version>3.3</version>
@@ -226,6 +234,40 @@
 				</plugin>
 			</plugins>
 		</pluginManagement>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<source>${java.version}</source>
+					<target>${java.version}</target>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-enforcer-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>enforce-maven-and-java</id>
+						<goals>
+							<goal>enforce</goal>
+						</goals>
+						<configuration>
+							<rules>
+								<requireMavenVersion>
+									<version>[${maven.required.version},)</version>
+									<message><![CDATA[Check for Maven version &gt;=${maven.required.version} failed. Update your Maven install. ]]></message>
+								</requireMavenVersion>
+								<requireJavaVersion>
+									<version>[${java.version},)</version>
+									<message><![CDATA[Check for Java version &gt;=${java.version} failed. Update your Java install.]]></message>
+								</requireJavaVersion>
+							</rules>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
 	</build>
 
 	<reporting>

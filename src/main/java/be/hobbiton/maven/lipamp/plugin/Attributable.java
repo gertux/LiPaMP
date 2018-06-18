@@ -1,9 +1,12 @@
 package be.hobbiton.maven.lipamp.plugin;
 
+import be.hobbiton.maven.lipamp.common.ArchiveEntry;
+
 public abstract class Attributable {
     private String username;
     private String groupname;
     private String mode;
+    private int modeValue;
 
     public final String getUsername() {
         return this.username;
@@ -25,7 +28,12 @@ public abstract class Attributable {
         return this.mode;
     }
 
-    public final void setMode(String mode) {
+    public void setMode(String mode) {
         this.mode = mode;
+        this.modeValue = ArchiveEntry.fromModeString(mode);
+    }
+
+    public int getModeValue() {
+        return modeValue;
     }
 }

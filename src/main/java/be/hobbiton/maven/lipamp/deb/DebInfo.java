@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 
+import be.hobbiton.maven.lipamp.common.SymbolicLinkArchiveEntry;
 import org.apache.commons.compress.archivers.ArchiveException;
 import org.apache.commons.compress.archivers.ArchiveStreamFactory;
 import org.apache.commons.compress.archivers.ar.ArArchiveEntry;
@@ -78,7 +79,7 @@ public class DebInfo {
             CompressorInputStream compInput = new CompressorStreamFactory().createCompressorInputStream(bufInput);
             tar = new TarArchiveInputStream(compInput);
             TarArchiveEntry tarEntry = tar.getNextTarEntry();
-            this.controlFiles = new ArrayList<File>();
+            this.controlFiles = new ArrayList<>();
             while (tarEntry != null) {
                 this.controlFiles.add(new File(tarEntry.getName()));
                 if (DebianInfoFile.CONTROL.getFilename().equals(tarEntry.getName())
@@ -98,7 +99,7 @@ public class DebInfo {
     }
 
     private final void readConffiles(InputStream input) {
-        this.conffiles = new HashSet<File>();
+        this.conffiles = new HashSet<>();
         BufferedReader reader = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8));
         String line = null;
         try {
@@ -122,9 +123,12 @@ public class DebInfo {
             CompressorInputStream compInput = new CompressorStreamFactory().createCompressorInputStream(bufInput);
             tar = new TarArchiveInputStream(compInput);
             TarArchiveEntry tarEntry = tar.getNextTarEntry();
-            this.dataFiles = new ArrayList<ArchiveEntry>();
+            this.dataFiles = new ArrayList<>();
             while (tarEntry != null) {
-                if (tarEntry.isDirectory()) {
+                if (tarEntry.isSymbolicLink()) {
+                    this.dataFiles.add(new SymbolicLinkArchiveEntry(tarEntry.getName(), tarEntry.getLinkName(), tarEntry.getUserName(),
+                            tarEntry.getGroupName(), tarEntry.getMode()));
+                } else if (tarEntry.isDirectory()) {
                     this.dataFiles.add(new DirectoryArchiveEntry(tarEntry.getName(), tarEntry.getUserName(),
                             tarEntry.getGroupName(), tarEntry.getMode()));
                 } else if (tarEntry.isFile()) {

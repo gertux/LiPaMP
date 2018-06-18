@@ -19,8 +19,7 @@ public class AttributeSelector extends Attributable {
     }
 
     public boolean isValid() {
-        return (StringUtils.isNotBlank(this.expression)) && (this.config || StringUtils.isNotBlank(getUsername())
-                || StringUtils.isNotBlank(getGroupname()) || StringUtils.isNotBlank(getMode()));
+        return (StringUtils.isNotBlank(this.expression)) && (this.config || StringUtils.isNotBlank(getUsername()) || StringUtils.isNotBlank(getGroupname()) || StringUtils.isNotBlank(getMode()));
     }
 
     public String getExpression() {
@@ -41,7 +40,6 @@ public class AttributeSelector extends Attributable {
 
     @Override
     public String toString() {
-        return String.format("path expression=%s u=%s g=%s m=%s %s", this.expression, getUsername(), getGroupname(),
-                getMode(), (this.config) ? "config" : "");
+        return String.format("path expression=%s u=%s g=%s m=%s %s", this.expression, getUsername(), getGroupname(), getMode(), (this.config) ? "config" : "");
     }
 }

@@ -1,20 +1,11 @@
 package be.hobbiton.maven.lipamp.plugin;
 
-import static be.hobbiton.maven.lipamp.common.ArchiveEntryCollector.*;
-import static be.hobbiton.maven.lipamp.deb.DebInfo.DebianInfoFile.*;
-
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
+import be.hobbiton.maven.lipamp.common.ArchiveEntry;
+import be.hobbiton.maven.lipamp.common.DirectoryArchiveEntry;
+import be.hobbiton.maven.lipamp.common.FileArchiveEntry;
+import be.hobbiton.maven.lipamp.common.SymbolicLinkArchiveEntry;
+import be.hobbiton.maven.lipamp.deb.DebianControl;
+import be.hobbiton.maven.lipamp.deb.DebianPackage;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.model.Developer;
 import org.apache.maven.plugin.AbstractMojo;
@@ -24,14 +15,23 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProject;
+import org.codehaus.plexus.util.SelectorUtils;
 import org.codehaus.plexus.util.StringUtils;
 
-import be.hobbiton.maven.lipamp.common.ArchiveEntry;
-import be.hobbiton.maven.lipamp.common.ArchiveEntryCollector;
-import be.hobbiton.maven.lipamp.common.DirectoryArchiveEntry;
-import be.hobbiton.maven.lipamp.common.FileArchiveEntry;
-import be.hobbiton.maven.lipamp.deb.DebianControl;
-import be.hobbiton.maven.lipamp.deb.DebianPackage;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.text.SimpleDateFormat;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static be.hobbiton.maven.lipamp.common.ArchiveEntry.*;
+import static be.hobbiton.maven.lipamp.deb.DebInfo.DebianInfoFile.CONFFILES;
+import static be.hobbiton.maven.lipamp.deb.DebInfo.DebianInfoFile.CONTROL;
 
 /**
  * Create a Debian package.
@@ -44,14 +44,18 @@ import be.hobbiton.maven.lipamp.deb.DebianPackage;
 @Mojo(name = "makedeb", requiresProject = true, requiresDependencyResolution = ResolutionScope.COMPILE)
 public class DebianPackageMojo extends AbstractMojo {
     public static final String DEBIAN_PACKAGING_TYPE = "deb";
-    public static final String DEBIAN_RESOURCES_DIRNAME = "deb";
+    public static final String DEBIAN_RESOURCES_DIR_NAME = "deb";
     public static final String DEBIAN_FILE_EXTENSION = ".deb";
-    public static final String CONFFILES_DIRNAME = "DEBIAN";
-    private static final String CURRENT_PATH = DOT;
-    /** As the targets for this mojo are primary Java apps, the package is by default architecture independent */
+    public static final String DEBIAN_CONTROL_FILES_DIR_NAME = "DEBIAN";
+    public static final Path DEBIAN_CONTROL_FILES_DIR_PATH = Paths.get(DEBIAN_CONTROL_FILES_DIR_NAME);
+    /**
+     * As the targets for this mojo are primary Java apps, the package is by default architecture independent
+     */
     protected static final String DEFAULT_ARCHITECTURE = "all";
     protected static final String SNAPSHOT_SUFFIX = "-SNAPSHOT";
-
+    private static final String CURRENT_PATH_ELEM = DOT;
+    private static final Path CURRENT_PATH = Paths.get(CURRENT_PATH_ELEM);
+    private static final Path ROOT_PATH = Paths.get(SLASH);
     /**
      * The Maven project
      */
@@ -168,7 +172,7 @@ public class DebianPackageMojo extends AbstractMojo {
      *   &lt;/artifact>
      * &lt;/artifacts>
      * </pre>
-     *
+     * <p>
      * type is optional, default value = jar
      *
      * @since 1.0.0
@@ -189,7 +193,7 @@ public class DebianPackageMojo extends AbstractMojo {
      *   &lt;/folder>
      * &lt;/folders>
      * </pre>
-     *
+     * <p>
      * username is optional, default value = root<br>
      * groupname is optional, default value = root<br>
      * mode is optional, default value = 0755
@@ -213,7 +217,7 @@ public class DebianPackageMojo extends AbstractMojo {
      *   &lt;/folder>
      * &lt;/folders>
      * </pre>
-     *
+     * <p>
      * username is optional, default value = root<br>
      * groupname is optional, default value = root<br>
      * mode is optional, default value = 0755<br>
@@ -266,31 +270,216 @@ public class DebianPackageMojo extends AbstractMojo {
     @Parameter(defaultValue = "${project.build.outputDirectory}", required = true)
     private File resourcesDirectory;
 
+    private Path packageBasePath;
+    private Path debianControlFilesBasePath;
+    private List<ConfigFileSelector> configFileSelectors;
+    private List<AttributeSelector> attributeSelectors;
+
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
-        ArchiveEntryCollector dataFilesCollector = new ArchiveEntryCollector();
-        List<File> controlFiles = new ArrayList<File>();
-        findFiles(getPackageBaseDir(), dataFilesCollector, controlFiles);
-        if (dataFilesCollector.isEmpty()) {
+        this.configure();
+        TreeSet<ArchiveEntry> dataArchiveEntries = new TreeSet<>(Comparator.comparing(ArchiveEntry::getName));
+        dataArchiveEntries.addAll(getFolderEntries());
+        dataArchiveEntries.addAll(getArtifactEntries());
+        dataArchiveEntries.addAll(collectDataArchiveEntries(this.packageBasePath));
+        if (dataArchiveEntries.size() <= 1) {
             throw new MojoFailureException("Useless build, nothing to package");
         }
+        generateConffilesFile(this.debianControlFilesBasePath.resolve(CONFFILES.getFilename()), dataArchiveEntries);
+        generateControlFile(getIstalledSize(dataArchiveEntries), this.debianControlFilesBasePath);
+        List<Path> controlPaths = collectControlPaths(this.debianControlFilesBasePath);
         File packageFile = getPackageFile();
-        DebianPackage debianPackage = new DebianPackage(controlFiles, dataFilesCollector.getEntries(), getLog());
+        DebianPackage debianPackage = new DebianPackage(getLog(), controlPaths, dataArchiveEntries);
         debianPackage.write(packageFile);
         this.project.getArtifact().setFile(packageFile);
     }
 
-    private File getPackageBaseDir() throws MojoExecutionException {
-        File packageBasedir = new File(this.resourcesDirectory, DEBIAN_RESOURCES_DIRNAME);
-        if (!packageBasedir.isDirectory()) {
-            if (packageBasedir.exists()) {
-                throw new MojoExecutionException(packageBasedir.getAbsolutePath() + " exists but is no directory");
+    private void generateConffilesFile(Path conffilesPath, TreeSet<ArchiveEntry> dataArchiveEntries) throws MojoExecutionException {
+        File conffilesFile = conffilesPath.toFile();
+        if (conffilesFile.isFile()) {
+            return;
+        }
+        List<ArchiveEntry> confFiles = dataArchiveEntries.stream().filter(this::isConfigFile).collect(Collectors.toList());
+        if (confFiles.isEmpty()) {
+            return;
+        }
+        try (FileOutputStream fos = new FileOutputStream(conffilesFile)) {
+            for (ArchiveEntry archiveEntry : confFiles) {
+                fos.write(archiveEntry.getAbsoluteName().getBytes());
+                fos.write('\n');
             }
-            if (!packageBasedir.mkdirs()) {
-                throw new MojoExecutionException("Failed to create " + packageBasedir.getAbsolutePath());
+        } catch (IOException e) {
+            throw new MojoExecutionException("Unable to write to conffiles file", e);
+        }
+    }
+
+    private boolean isConfigFile(ArchiveEntry archiveEntry) {
+        if (!ArchiveEntry.ArchiveEntryType.F.equals(archiveEntry.getType())) {
+            return false;
+        }
+        for (ConfigFileSelector selector : this.configFileSelectors) {
+            if (SelectorUtils.matchPath(selector.getExpression(), archiveEntry.getAbsoluteName())) {
+                return true;
             }
         }
-        return packageBasedir;
+        return false;
+    }
+
+    private void configure() throws MojoFailureException, MojoExecutionException {
+        configureAttributeSelectors();
+        this.defaultDirectoryModeValue = modeValueOrDefault(ArchiveEntry.fromModeString(this.defaultDirectoryMode), DEFAULT_DIRMODE_VALUE);
+        this.defaultFileModeValue = modeValueOrDefault(ArchiveEntry.fromModeString(this.defaultFileMode), DEFAULT_FILEMODE_VALUE);
+        this.packageBasePath = this.resourcesDirectory.toPath().resolve(DEBIAN_RESOURCES_DIR_NAME);
+        this.debianControlFilesBasePath = packageBasePath.resolve(DEBIAN_CONTROL_FILES_DIR_PATH);
+        createFolderIfMissing(this.debianControlFilesBasePath);
+    }
+
+    private List<ArchiveEntry> getFolderEntries() {
+        if (this.folders != null) {
+            return Arrays.stream(this.folders).flatMap(this::toArchiveEntries).collect(Collectors.toList());
+        }
+        return new ArrayList<>();
+    }
+
+    private Stream<ArchiveEntry> toArchiveEntries(FolderEntry folderEntry) {
+        List<ArchiveEntry> archiveEntries = new ArrayList<>();
+        if (folderEntry.isValid()) {
+            Path destPath = Paths.get(folderEntry.getPath());
+            if (destPath.startsWith(ROOT_PATH)) {
+                destPath = ROOT_PATH.relativize(destPath);
+            }
+            for (Path pathElem : destPath.getParent()) {
+                archiveEntries.add(toArchiveEntry(pathElem, null, null, ArchiveEntry.ArchiveEntryType.D));
+            }
+            archiveEntries.add(new DirectoryArchiveEntry(String.valueOf(CURRENT_PATH.resolve(destPath)), stringValueOrDefault(folderEntry.getUsername(), this.defaultUsername), stringValueOrDefault(folderEntry.getGroupname(), this.defaultGroupname), modeValueOrDefault(folderEntry.getModeValue(), this.defaultDirectoryModeValue)));
+        }
+        return archiveEntries.stream();
+    }
+
+    private List<ArchiveEntry> getArtifactEntries() throws MojoFailureException {
+        List<ArchiveEntry> archiveEntries = new ArrayList<>();
+        if (this.artifacts == null) {
+            return archiveEntries;
+        }
+        for (ArtifactPackageEntry artifactEntry : this.artifacts) {
+            if (StringUtils.isNotBlank(artifactEntry.getDestination())) {
+                Artifact depArtifact = getDependentArtifact(artifactEntry);
+                Path destPath;
+                if (artifactEntry.getDestination().endsWith(SLASH)) {
+                    destPath = Paths.get(artifactEntry.getDestination().concat(depArtifact.getArtifactId().concat(DOT).concat(depArtifact.getType())));
+                } else {
+                    destPath = Paths.get(artifactEntry.getDestination());
+                }
+                if (destPath.startsWith(ROOT_PATH)) {
+                    destPath = ROOT_PATH.relativize(destPath);
+                }
+                for (Path pathElem : destPath.getParent()) {
+                    archiveEntries.add(toArchiveEntry(pathElem, null, null, ArchiveEntry.ArchiveEntryType.D));
+                }
+                archiveEntries.add(new FileArchiveEntry(String.valueOf(CURRENT_PATH.resolve(destPath)), depArtifact.getFile(), artifactEntry.getUsername(), artifactEntry.getGroupname(), getMode(artifactEntry.getMode(), String.valueOf(destPath))));
+            } else {
+                throw new MojoFailureException("Invalid artifact destination specification");
+            }
+        }
+        return archiveEntries;
+    }
+
+    private long getIstalledSize(Collection<ArchiveEntry> dataArchiveEntries) {
+        return dataArchiveEntries.stream().mapToLong(ArchiveEntry::getSize).sum();
+    }
+
+    private void configureAttributeSelectors() throws MojoFailureException {
+        this.configFileSelectors = new ArrayList<>();
+        this.attributeSelectors = new ArrayList<>();
+        if (this.attributes != null) {
+            for (AttributeSelector attributeSelector : this.attributes) {
+                if (attributeSelector.isValid()) {
+                    if (attributeSelector.isConfig()) {
+                        this.configFileSelectors.add(ConfigFileSelector.fromAttributeSelector(attributeSelector));
+                    }
+                    this.attributeSelectors.add(attributeSelector);
+                } else {
+                    throw new MojoFailureException("Invalid attributes specification " + attributeSelector.toString());
+                }
+            }
+        }
+    }
+
+    private List<Path> collectControlPaths(Path confFilesPath) throws MojoExecutionException {
+        if (!confFilesPath.toFile().isDirectory()) {
+            return Collections.emptyList();
+        }
+        try (Stream<Path> fileList = Files.list(confFilesPath)) {
+            return fileList.filter(Files::isRegularFile).collect(Collectors.toList());
+        } catch (IOException e) {
+            throw new MojoExecutionException("Cannot collect control files", e);
+        }
+    }
+
+    private List<ArchiveEntry> collectDataArchiveEntries(Path dataFilesPath) throws MojoExecutionException {
+        try (Stream<Path> fileList = Files.walk(dataFilesPath)) {
+            return fileList.map(this::relativePath).filter(this::isDataPath).map(this::toArchiveEntry).collect(Collectors.toList());
+        } catch (IOException e) {
+            throw new MojoExecutionException("Cannot collect data files", e);
+        }
+    }
+
+    private Path relativePath(Path path) {
+        return this.packageBasePath.relativize(path);
+    }
+
+    private boolean isDataPath(Path path) {
+        return !path.startsWith(DEBIAN_CONTROL_FILES_DIR_PATH);
+    }
+
+    private ArchiveEntry toArchiveEntry(Path relpath) {
+        Path path = packageBasePath.resolve(relpath);
+        if (Files.isSymbolicLink(path)) {
+            return toArchiveEntry(relpath, null, getLinkTarget(path), ArchiveEntry.ArchiveEntryType.S);
+        } else if (path.toFile().isDirectory()) {
+            return toArchiveEntry(relpath, null, null, ArchiveEntry.ArchiveEntryType.D);
+        } else {
+            return toArchiveEntry(relpath, path, null, ArchiveEntry.ArchiveEntryType.F);
+        }
+    }
+
+    private String getLinkTarget(Path path) {
+        try {
+            return String.valueOf(Files.readSymbolicLink(path));
+        } catch (IOException e) {
+            throw new DebianMojoException("Cannot read link information for ".concat(String.valueOf(path)), e);
+        }
+    }
+
+    private ArchiveEntry toArchiveEntry(Path relpath, Path contents, String link, ArchiveEntry.ArchiveEntryType type) {
+        String userName = this.defaultUsername;
+        String groupName = this.defaultGroupname;
+        int fileMode = this.defaultFileModeValue;
+        int dirMode = this.defaultDirectoryModeValue;
+        for (AttributeSelector attributeSelector : this.attributeSelectors) {
+            if (SelectorUtils.matchPath(attributeSelector.getExpression(), SLASH.concat(String.valueOf(relpath)))) {
+                userName = stringValueOrDefault(attributeSelector.getUsername(), userName);
+                groupName = stringValueOrDefault(attributeSelector.getGroupname(), groupName);
+                fileMode = modeValueOrDefault(attributeSelector.getModeValue(), fileMode);
+                dirMode = modeValueOrDefault(attributeSelector.getModeValue(), dirMode);
+            }
+        }
+        switch (type) {
+            case S:
+                return new SymbolicLinkArchiveEntry(String.valueOf(CURRENT_PATH.resolve(relpath)), link, userName, groupName, dirMode);
+            case D:
+                return new DirectoryArchiveEntry(String.valueOf(CURRENT_PATH.resolve(relpath)), userName, groupName, dirMode);
+            default:
+                return new FileArchiveEntry(String.valueOf(CURRENT_PATH.resolve(relpath)), contents.toFile(), userName, groupName, fileMode);
+        }
+    }
+
+    private String stringValueOrDefault(String value, String defaultValue) {
+        return (value != null) ? value : defaultValue;
+    }
+
+    private int modeValueOrDefault(int value, int defaultValue) {
+        return (value != ArchiveEntry.INVALID_MODE) ? value : defaultValue;
     }
 
     protected File getPackageFile() throws MojoExecutionException {
@@ -301,11 +490,14 @@ public class DebianPackageMojo extends AbstractMojo {
 
     protected String getVersion() {
         if (this.version.endsWith(SNAPSHOT_SUFFIX)) {
-            SimpleDateFormat format = new SimpleDateFormat(
-                    this.version.substring(0, this.version.length() - SNAPSHOT_SUFFIX.length()) + "-yyyyMMddHHmmss");
+            SimpleDateFormat format = new SimpleDateFormat(this.version.substring(0, this.version.length() - SNAPSHOT_SUFFIX.length()) + "-yyyyMMddHHmmss");
             return format.format(new Date());
         }
         return this.version;
+    }
+
+    protected void setVersion(String version) {
+        this.version = version;
     }
 
     protected String getMaintainer() {
@@ -313,6 +505,10 @@ public class DebianPackageMojo extends AbstractMojo {
             return this.maintainer;
         }
         return getMaintainerFromModel();
+    }
+
+    protected void setMaintainer(String maintainer) {
+        this.maintainer = maintainer;
     }
 
     private String getMaintainerFromModel() {
@@ -333,131 +529,6 @@ public class DebianPackageMojo extends AbstractMojo {
             }
         }
         return System.getProperty("user.name");
-    }
-
-    private void findFiles(File packageBasedir, ArchiveEntryCollector dataFilesCollector, Collection<File> controlFiles)
-            throws MojoExecutionException, MojoFailureException {
-        Set<File> conffiles = new HashSet<File>();
-        ControlStatus controlStatus = new ControlStatus();
-        handleFiles(packageBasedir, dataFilesCollector, controlFiles, controlStatus);
-        if (this.artifacts != null && this.artifacts.length > 0) {
-            handleArtifacts(dataFilesCollector);
-        }
-        if (this.folders != null && this.folders.length > 0) {
-            handleFolders(dataFilesCollector);
-        }
-        if (this.attributes != null && this.attributes.length > 0) {
-            handleAttributes(dataFilesCollector, conffiles);
-        }
-        if (!controlStatus.haveControl()) {
-            controlFiles.add(generateControlFile(dataFilesCollector.getInstalledSize(), packageBasedir));
-        }
-        if (!controlStatus.haveConnffiles() && !conffiles.isEmpty()) {
-            controlFiles.add(generateConnffilesFile(conffiles, packageBasedir));
-        }
-    }
-
-    private void handleFiles(File packageBasedir, ArchiveEntryCollector dataFilesCollector,
-            Collection<File> controlFiles, ControlStatus controlStatus) {
-        for (File file : packageBasedir.listFiles()) {
-            if (CONFFILES_DIRNAME.equals(file.getName())) {
-                // add control files
-                addControlFiles(controlFiles, controlStatus, file);
-            } else {
-                addDataFile(dataFilesCollector, file, SLASH);
-            }
-        }
-    }
-
-    private void handleAttributes(ArchiveEntryCollector dataFilesCollector, Set<File> conffiles)
-            throws MojoFailureException {
-        for (AttributeSelector attributeSelector : this.attributes) {
-            if (attributeSelector.isValid()) {
-                conffiles.addAll(dataFilesCollector.applyAttributes(attributeSelector.getExpression(),
-                        attributeSelector.getUsername(), attributeSelector.getGroupname(),
-                        getMode(attributeSelector.getMode(), attributeSelector.getExpression()),
-                        attributeSelector.isConfig()));
-            } else {
-                throw new MojoFailureException("Invalid attributes specification " + attributeSelector.toString());
-            }
-        }
-    }
-
-    private void handleFolders(ArchiveEntryCollector dataFilesCollector) throws MojoFailureException {
-        for (FolderEntry folder : this.folders) {
-            if (folder.isValid()) {
-                DirectoryArchiveEntry parentFolder = new DirectoryArchiveEntry(folder.getPath(), folder.getUsername(),
-                        folder.getGroupname(), getMode(folder.getMode(), folder.getPath()));
-                dataFilesCollector.add(parentFolder);
-            } else {
-                throw new MojoFailureException("Invalid folder specification " + folder.toString());
-            }
-        }
-    }
-
-    private void handleArtifacts(ArchiveEntryCollector dataFilesCollector) throws MojoFailureException {
-        for (ArtifactPackageEntry artifactEntry : this.artifacts) {
-            if (StringUtils.isNotBlank(artifactEntry.getDestination())) {
-                Artifact depArtifact = getDependentArtifact(artifactEntry);
-                File destFile = null;
-                if (artifactEntry.getDestination().endsWith(SLASH)) {
-                    destFile = new File(cleanPath(artifactEntry.getDestination() + depArtifact.getArtifactId() + DOT
-                            + depArtifact.getType()));
-                } else {
-                    destFile = new File(cleanPath(artifactEntry.getDestination()));
-                }
-                DirectoryArchiveEntry parentFolder = new DirectoryArchiveEntry(destFile.getParent(), null, null,
-                        ArchiveEntry.INVALID_MODE);
-                dataFilesCollector.add(parentFolder);
-                FileArchiveEntry fileEntry = new FileArchiveEntry(destFile.getPath(), depArtifact.getFile(),
-                        artifactEntry.getUsername(), artifactEntry.getGroupname(),
-                        getMode(artifactEntry.getMode(), destFile.getPath()));
-                dataFilesCollector.add(fileEntry);
-            } else {
-                throw new MojoFailureException("Invalid artifact destination specification");
-            }
-        }
-    }
-
-    private void addControlFiles(Collection<File> controlFiles, ControlStatus controlStatus, File file) {
-        for (File controlFile : file.listFiles()) {
-            getLog().debug("Adding control " + controlFile.getAbsolutePath());
-            if (CONTROL.getFilename().equals(controlFile.getName())) {
-                controlStatus.setHaveControl();
-            } else if (CONFFILES.getFilename().equals(controlFile.getName())) {
-                controlStatus.setHaveConnffiles();
-            }
-            controlFiles.add(controlFile);
-        }
-    }
-
-    private File generateConnffilesFile(Set<File> conffiles, File packageBasedir) throws MojoExecutionException {
-        File conffilesFile = new File(getValidConfigResourcesDir(packageBasedir), CONFFILES.getFilename());
-        FileOutputStream fos = null;
-        try {
-            fos = new FileOutputStream(conffilesFile);
-            for (File conffile : conffiles) {
-                String path = conffile.getAbsolutePath().trim();
-                if (StringUtils.isNotBlank(path)) {
-                    byte[] pathBytes = path.getBytes();
-                    fos.write(pathBytes);
-                    fos.write('\n');
-                }
-            }
-        } catch (FileNotFoundException e) {
-            throw new MojoExecutionException("Unable to create conffiles file", e);
-        } catch (IOException e) {
-            throw new MojoExecutionException("Unable to write to conffiles file", e);
-        } finally {
-            if (fos != null) {
-                try {
-                    fos.close();
-                } catch (IOException e) {
-                    getLog().error(e);
-                }
-            }
-        }
-        return conffilesFile;
     }
 
     private Artifact getDependentArtifact(ArtifactPackageEntry artifactEntry) throws MojoFailureException {
@@ -485,19 +556,6 @@ public class DebianPackageMojo extends AbstractMojo {
         return null;
     }
 
-    private String cleanPath(String path) {
-        String newPath = path.trim();
-        if (newPath.endsWith(SLASH)) {
-            newPath = path.substring(0, path.length() - 1);
-        }
-        if (newPath.startsWith(SLASH)) {
-            newPath = CURRENT_PATH + newPath;
-        } else if (!newPath.startsWith(DebianPackage.CURRENT_DIR)) {
-            newPath = DebianPackage.CURRENT_DIR + newPath;
-        }
-        return newPath;
-    }
-
     private int getMode(String mode, String path) throws MojoFailureException {
         if (StringUtils.isBlank(mode)) {
             return ArchiveEntry.INVALID_MODE;
@@ -505,38 +563,42 @@ public class DebianPackageMojo extends AbstractMojo {
         try {
             return Integer.parseInt(mode, 8);
         } catch (NumberFormatException e) {
-            throw new MojoFailureException(
-                    String.format("Path \"%s\" is configured with an invalid mode %s", path, mode));
+            throw new MojoFailureException(String.format("Path \"%s\" is configured with an invalid mode %s", path, mode));
         }
     }
 
-    private File generateControlFile(long installedSize, File packageBasedir) throws MojoExecutionException {
-        DebianControl control = new DebianControl();
-        control.setPackageName(this.packageName);
-        control.setVersion(getVersion());
-        control.setArchitecture(this.architecture);
-        control.setMaintainer(getMaintainer());
-        control.setDescriptionSynopsis(this.descriptionSynopsis);
-        control.setDescription(this.description);
-        control.setInstalledSize(getSizeKB(installedSize));
-        control.setDepends(this.depends);
-        control.setHomepage(this.homepage);
-        control.setSection(this.section);
-        control.setPriority(this.priority);
-        File controlFile = new File(getValidConfigResourcesDir(packageBasedir), CONTROL.getFilename());
-        FileOutputStream fos = null;
-        try {
-            fos = new FileOutputStream(controlFile);
-            control.write(fos);
-        } catch (FileNotFoundException e) {
-            throw new MojoExecutionException("Unable to create control file", e);
-        } finally {
-            if (fos != null) {
-                try {
-                    fos.close();
-                } catch (IOException e) {
-                    getLog().error(e);
-                }
+    private boolean createFolderIfMissing(Path folderPath) throws MojoExecutionException {
+        boolean created = false;
+        if (!folderPath.toFile().isDirectory()) {
+            try {
+                Files.createDirectories(folderPath);
+                created = true;
+            } catch (IOException e) {
+                throw new MojoExecutionException("Cannot create folder ".concat(String.valueOf(folderPath)), e);
+            }
+        }
+        return created;
+    }
+
+    private File generateControlFile(long installedSize, Path confFilesBasePath) throws MojoExecutionException {
+        File controlFile = new File(confFilesBasePath.toFile(), CONTROL.getFilename());
+        if (!controlFile.isFile()) {
+            DebianControl control = new DebianControl();
+            control.setPackageName(this.packageName);
+            control.setVersion(getVersion());
+            control.setArchitecture(this.architecture);
+            control.setMaintainer(getMaintainer());
+            control.setDescriptionSynopsis(this.descriptionSynopsis);
+            control.setDescription(this.description);
+            control.setInstalledSize(getSizeKB(installedSize));
+            control.setDepends(this.depends);
+            control.setHomepage(this.homepage);
+            control.setSection(this.section);
+            control.setPriority(this.priority);
+            try (FileOutputStream fos = new FileOutputStream(controlFile)) {
+                control.write(fos);
+            } catch (IOException e) {
+                throw new MojoExecutionException("Unable to create control file", e);
             }
         }
         return controlFile;
@@ -546,60 +608,19 @@ public class DebianPackageMojo extends AbstractMojo {
         return sizeByte / 1024 + (((sizeByte % 1024) > 0) ? 1 : 0);
     }
 
-    private File getValidConfigResourcesDir(File packageBasedir) throws MojoExecutionException {
-        File debianConffilesDir = new File(packageBasedir, CONFFILES_DIRNAME);
-        if (!debianConffilesDir.isDirectory() && !debianConffilesDir.mkdirs()) {
-            throw new MojoExecutionException(
-                    "Unable to create debian resources directory: " + debianConffilesDir.getAbsolutePath());
-        }
-        return debianConffilesDir;
-    }
-
     private File getValidOutputDir() throws MojoExecutionException {
         if (!this.outputDirectory.isDirectory() && !this.outputDirectory.mkdirs()) {
-            throw new MojoExecutionException(
-                    "Unable to create output directory: " + this.outputDirectory.getAbsolutePath());
+            throw new MojoExecutionException("Unable to create output directory: " + this.outputDirectory.getAbsolutePath());
         }
         return this.outputDirectory;
     }
 
-    private void addDataFile(ArchiveEntryCollector dataFilesCollector, File datafile, String prefix) {
-        getLog().debug("Adding data " + datafile.getAbsolutePath());
-        String name = prefix + datafile.getName();
-        if (datafile.isDirectory()) {
-            DirectoryArchiveEntry dirEntry = new DirectoryArchiveEntry(name, this.defaultUsername,
-                    this.defaultGroupname, getDefaultDirectoryMode());
-            dataFilesCollector.add(dirEntry);
-            for (File nestedDataFile : datafile.listFiles()) {
-                addDataFile(dataFilesCollector, nestedDataFile, name + SLASH);
-            }
-        } else {
-            FileArchiveEntry fileEntry = new FileArchiveEntry(name, datafile, this.defaultUsername,
-                    this.defaultGroupname, getDefaultFileMode());
-            dataFilesCollector.add(fileEntry);
-        }
+    protected void setDefaultDirectoryMode(String defaultDirectoryMode) {
+        this.defaultDirectoryMode = defaultDirectoryMode;
     }
 
-    protected int getDefaultDirectoryMode() {
-        if (this.defaultDirectoryModeValue == null) {
-            try {
-                this.defaultDirectoryModeValue = Integer.parseInt(this.defaultDirectoryMode, 8);
-            } catch (NumberFormatException e) {
-                this.defaultDirectoryModeValue = Integer.parseInt(DEFAULT_DIRMODE, 8);
-            }
-        }
-        return this.defaultDirectoryModeValue;
-    }
-
-    protected int getDefaultFileMode() {
-        if (this.defaultFileModeValue == null) {
-            try {
-                this.defaultFileModeValue = Integer.parseInt(this.defaultFileMode, 8);
-            } catch (NumberFormatException e) {
-                this.defaultFileModeValue = Integer.parseInt(DEFAULT_FILEMODE, 8);
-            }
-        }
-        return this.defaultFileModeValue;
+    protected void setDefaultFileMode(String defaultFileMode) {
+        this.defaultFileMode = defaultFileMode;
     }
 
     protected void setProject(MavenProject project) {
@@ -618,14 +639,6 @@ public class DebianPackageMojo extends AbstractMojo {
         this.defaultGroupname = defaultGroupname;
     }
 
-    protected void setDefaultFileMode(String defaultFileMode) {
-        this.defaultFileMode = defaultFileMode;
-    }
-
-    protected void setDefaultDirectoryMode(String defaultDirectoryMode) {
-        this.defaultDirectoryMode = defaultDirectoryMode;
-    }
-
     protected void setArtifacts(ArtifactPackageEntry[] artifacts) {
         this.artifacts = artifacts;
     }
@@ -636,10 +649,6 @@ public class DebianPackageMojo extends AbstractMojo {
 
     protected void setDescription(String description) {
         this.description = description;
-    }
-
-    protected void setMaintainer(String maintainer) {
-        this.maintainer = maintainer;
     }
 
     protected void setFolders(FolderEntry[] folders) {
@@ -670,10 +679,6 @@ public class DebianPackageMojo extends AbstractMojo {
         this.packageName = packageName;
     }
 
-    protected void setVersion(String version) {
-        this.version = version;
-    }
-
     protected void setArchitecture(String architecture) {
         this.architecture = architecture;
     }
@@ -684,26 +689,5 @@ public class DebianPackageMojo extends AbstractMojo {
 
     public void setResourcesDirectory(File resourcesDirectory) {
         this.resourcesDirectory = resourcesDirectory;
-    }
-
-    private static class ControlStatus {
-        boolean haveControl = false;
-        boolean haveConnffiles = false;
-
-        public boolean haveControl() {
-            return this.haveControl;
-        }
-
-        public void setHaveControl() {
-            this.haveControl = true;
-        }
-
-        public boolean haveConnffiles() {
-            return this.haveConnffiles;
-        }
-
-        public void setHaveConnffiles() {
-            this.haveConnffiles = true;
-        }
     }
 }

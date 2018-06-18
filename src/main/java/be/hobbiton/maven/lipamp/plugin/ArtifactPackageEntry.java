@@ -7,7 +7,7 @@ import org.codehaus.plexus.util.StringUtils;
  * Artifact to be included in a package
  */
 public class ArtifactPackageEntry extends Attributable {
-    protected static String DEFAULT_TYPE = "jar";
+    static final String DEFAULT_TYPE = "jar";
     private String artifactId;
     private String groupId;
     private String type = DEFAULT_TYPE;
