@@ -29,7 +29,7 @@ Debian example
               +--- hiapp.conf
 +---
 
-  The <<<src/main/deb>>> folder is the starting point for the file system resources. The DEBIAN 
+  The <<<src/main/resoources/deb>>> folder is the starting point for the file system resources. The DEBIAN
   subfolder contains the Debian control files, in this example only <<preinst>> is used, other 
   possible files are <<postinst>>, <<prerm>>, <<postrm>>, ...
   
