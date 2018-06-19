@@ -33,7 +33,10 @@ public final class TestConstants {
     public static final String DEP_GROUPID = "be.hobbiton.cloud";
     public static final String DEP_PACKAGING = "jar";
     public static final VersionRange DEP_VERSION = VersionRange.createFromVersion("1.0.0");
-    public static final String DEP_DESTINATION = "/opt/hiapp/";
+    public static final String DEP_DESTINATION_DIR = "/opt/hiapp/";
+    public static final String ART_FILENAME = "hiapp-1.0.0.jar";
+    public static final String ART_NOVERSION_FILENAME = "hiapp.jar";
+    public static final String DEP_DESTINATION_FILE = DEP_DESTINATION_DIR.concat(ART_NOVERSION_FILENAME);
     public static final String DEP_SCOPE = "compile";
 
     private TestConstants() {

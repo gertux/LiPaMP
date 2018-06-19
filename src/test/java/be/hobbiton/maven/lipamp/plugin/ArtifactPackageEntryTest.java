@@ -14,43 +14,37 @@ public class ArtifactPackageEntryTest {
 
     @Test
     public void testIsValid() {
-        ArtifactPackageEntry artifactPackageEntry = new ArtifactPackageEntry(DEP_ARTIFACTID, DEP_GROUPID, DEP_PACKAGING,
-                DEP_DESTINATION, null, null, null);
+        ArtifactPackageEntry artifactPackageEntry = new ArtifactPackageEntry(DEP_ARTIFACTID, DEP_GROUPID, DEP_PACKAGING, DEP_DESTINATION_DIR, null, null, null);
         assertTrue(artifactPackageEntry.isValid());
     }
 
     @Test
     public void testIsValidDefaultPackage() {
-        ArtifactPackageEntry artifactPackageEntry = new ArtifactPackageEntry(DEP_ARTIFACTID, DEP_GROUPID, null,
-                DEP_DESTINATION, null, null, null);
+        ArtifactPackageEntry artifactPackageEntry = new ArtifactPackageEntry(DEP_ARTIFACTID, DEP_GROUPID, null, DEP_DESTINATION_DIR, null, null, null);
         assertTrue(artifactPackageEntry.isValid());
     }
 
     @Test
     public void testIsValidEmptyGroupId() {
-        ArtifactPackageEntry artifactPackageEntry = new ArtifactPackageEntry(DEP_ARTIFACTID, "", DEP_PACKAGING,
-                DEP_DESTINATION, null, null, null);
+        ArtifactPackageEntry artifactPackageEntry = new ArtifactPackageEntry(DEP_ARTIFACTID, "", DEP_PACKAGING, DEP_DESTINATION_DIR, null, null, null);
         assertFalse(artifactPackageEntry.isValid());
     }
 
     @Test
     public void testIsValidNullGroupId() {
-        ArtifactPackageEntry artifactPackageEntry = new ArtifactPackageEntry(DEP_ARTIFACTID, null, DEP_PACKAGING,
-                DEP_DESTINATION, null, null, null);
+        ArtifactPackageEntry artifactPackageEntry = new ArtifactPackageEntry(DEP_ARTIFACTID, null, DEP_PACKAGING, DEP_DESTINATION_DIR, null, null, null);
         assertFalse(artifactPackageEntry.isValid());
     }
 
     @Test
     public void testIsValidEmptyArtifactId() {
-        ArtifactPackageEntry artifactPackageEntry = new ArtifactPackageEntry("", DEP_GROUPID, DEP_PACKAGING,
-                DEP_DESTINATION, null, null, null);
+        ArtifactPackageEntry artifactPackageEntry = new ArtifactPackageEntry("", DEP_GROUPID, DEP_PACKAGING, DEP_DESTINATION_DIR, null, null, null);
         assertFalse(artifactPackageEntry.isValid());
     }
 
     @Test
     public void testIsValidNullArtifactId() {
-        ArtifactPackageEntry artifactPackageEntry = new ArtifactPackageEntry(null, DEP_GROUPID, DEP_PACKAGING,
-                DEP_DESTINATION, null, null, null);
+        ArtifactPackageEntry artifactPackageEntry = new ArtifactPackageEntry(null, DEP_GROUPID, DEP_PACKAGING, DEP_DESTINATION_DIR, null, null, null);
         assertFalse(artifactPackageEntry.isValid());
     }
 
@@ -70,45 +64,41 @@ public class ArtifactPackageEntryTest {
 
     @Test
     public void testCompareToSame() {
-        ArtifactPackageEntry artifactPackageEntry = new ArtifactPackageEntry(DEP_ARTIFACTID, DEP_GROUPID, DEP_PACKAGING,
-                DEP_DESTINATION, null, null, null);
+        ArtifactPackageEntry artifactPackageEntry = new ArtifactPackageEntry(DEP_ARTIFACTID, DEP_GROUPID, DEP_PACKAGING, DEP_DESTINATION_DIR, null, null, null);
         assertTrue(artifactPackageEntry.matches(DEP_ARTIFACT));
     }
 
     @Test
     public void testCompareToSameDefaultType() {
-        ArtifactPackageEntry artifactPackageEntry = new ArtifactPackageEntry(DEP_ARTIFACTID, DEP_GROUPID, null,
-                DEP_DESTINATION, null, null, null);
+        ArtifactPackageEntry artifactPackageEntry = new ArtifactPackageEntry(DEP_ARTIFACTID, DEP_GROUPID, null, DEP_DESTINATION_DIR, null, null, null);
         assertTrue(artifactPackageEntry.matches(new DefaultArtifact(DEP_GROUPID, DEP_ARTIFACTID, DEP_VERSION, DEP_SCOPE,
                 DEFAULT_TYPE, null, new DefaultArtifactHandler())));
     }
 
     @Test
     public void testCompareToOtherDefaultType() {
-        ArtifactPackageEntry artifactPackageEntry = new ArtifactPackageEntry(DEP_ARTIFACTID, DEP_GROUPID, null,
-                DEP_DESTINATION, null, null, null);
+        ArtifactPackageEntry artifactPackageEntry = new ArtifactPackageEntry(DEP_ARTIFACTID, DEP_GROUPID, null, DEP_DESTINATION_DIR, null, null, null);
         assertFalse(artifactPackageEntry.matches(new DefaultArtifact(DEP_GROUPID, DEP_ARTIFACTID, DEP_VERSION,
                 DEP_SCOPE, "pom", null, new DefaultArtifactHandler())));
     }
 
     @Test
     public void testCompareToOtherType() {
-        ArtifactPackageEntry artifactPackageEntry = new ArtifactPackageEntry(DEP_ARTIFACTID, DEP_GROUPID, "pom",
-                DEP_DESTINATION, null, null, null);
+        ArtifactPackageEntry artifactPackageEntry = new ArtifactPackageEntry(DEP_ARTIFACTID, DEP_GROUPID, "pom", DEP_DESTINATION_DIR, null, null, null);
         assertFalse(artifactPackageEntry.matches(DEP_ARTIFACT));
     }
 
     @Test
     public void testCompareToOtherGroupId() {
         ArtifactPackageEntry artifactPackageEntry = new ArtifactPackageEntry(DEP_ARTIFACTID, DEP_GROUPID + "-other",
-                DEP_PACKAGING, DEP_DESTINATION, null, null, null);
+                DEP_PACKAGING, DEP_DESTINATION_DIR, null, null, null);
         assertFalse(artifactPackageEntry.matches(DEP_ARTIFACT));
     }
 
     @Test
     public void testCompareToOtherArtifactId() {
         ArtifactPackageEntry artifactPackageEntry = new ArtifactPackageEntry(DEP_ARTIFACTID + "-other", DEP_GROUPID,
-                DEP_PACKAGING, DEP_DESTINATION, null, null, null);
+                DEP_PACKAGING, DEP_DESTINATION_DIR, null, null, null);
         assertFalse(artifactPackageEntry.matches(DEP_ARTIFACT));
     }
 }

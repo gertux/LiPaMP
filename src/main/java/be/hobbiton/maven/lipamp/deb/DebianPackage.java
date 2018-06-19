@@ -144,10 +144,16 @@ public class DebianPackage implements Packager {
     }
 
     private File writeControl() throws DebianPackageException {
+        if(logger.isDebugEnabled()) {
+            logger.debug("Writing control archive");
+        }
         return writeCompressedArchive(this.controlFiles);
     }
 
     private File writeData() throws DebianPackageException {
+        if(logger.isDebugEnabled()) {
+            logger.debug("Writing data archive");
+        }
         return writeCompressedArchive(this.dataFiles);
     }
 
@@ -185,6 +191,9 @@ public class DebianPackage implements Packager {
         TarArchiveOutputStream tarOutput;
         tarOutput = new TarArchiveOutputStream(gzippedOutput);
         for (ArchiveEntry fileEntry : archiveEntries) {
+            if(logger.isDebugEnabled()) {
+                logger.debug("Archiving ".concat(String.valueOf(fileEntry)));
+            }
             TarArchiveEntry entry;
             if(ArchiveEntryType.S.equals(fileEntry.getType())) {
                 entry = new TarArchiveEntry(getTarName(fileEntry.getName()), TarConstants.LF_SYMLINK);

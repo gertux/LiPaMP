@@ -14,7 +14,7 @@ public class ArchiveEntry {
     public static final String DEFAULT_DIRMODE = "0755";
     public static final int DEFAULT_DIRMODE_VALUE = Integer.parseInt(DEFAULT_DIRMODE, 8);
     public static final int INVALID_MODE = -1;
-    private static final long INVALID_SIZE = -1L;
+    public static final long INVALID_SIZE = -1L;
     private static final char[] OCHARS = {'r', 'x', 'w'};
     private String name;
     private String absoluteName;
@@ -48,14 +48,15 @@ public class ArchiveEntry {
     }
 
     public static int fromModeString(String mode) {
+        int modeValue = INVALID_MODE;
         if (!StringUtils.isBlank(mode)) {
             try {
-                return Integer.parseInt(mode, 8);
+                modeValue = Integer.parseInt(mode, 8);
             } catch (NumberFormatException e) {
                 return INVALID_MODE;
             }
         }
-        return INVALID_MODE;
+        return (modeValue>0) ? modeValue : INVALID_MODE;
     }
 
     private String getAbsoluteName(String name) {

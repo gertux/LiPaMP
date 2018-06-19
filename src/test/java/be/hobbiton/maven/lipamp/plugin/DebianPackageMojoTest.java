@@ -1,8 +1,6 @@
 package be.hobbiton.maven.lipamp.plugin;
 
-import be.hobbiton.maven.lipamp.common.ArchiveEntry;
-import be.hobbiton.maven.lipamp.common.Slf4jLogImpl;
-import be.hobbiton.maven.lipamp.common.SymbolicLinkArchiveEntry;
+import be.hobbiton.maven.lipamp.common.*;
 import be.hobbiton.maven.lipamp.deb.DebInfo;
 import be.hobbiton.maven.lipamp.deb.DebInfoTest;
 import be.hobbiton.maven.lipamp.deb.DebianPackage;
@@ -35,11 +33,10 @@ import static be.hobbiton.maven.lipamp.common.ArchiveEntry.*;
 import static be.hobbiton.maven.lipamp.common.TestConstants.*;
 import static be.hobbiton.maven.lipamp.deb.DebInfo.DebianInfoFile.*;
 import static be.hobbiton.maven.lipamp.plugin.DebianPackageMojo.*;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class DebianPackageMojoTest {
-    public static final String LINK = "usr";
+    public static final String LINK = "sys";
     public static final String LINK_TARGET = "../var/usr";
     private static final String CONFFILES_PATH = "deb/DEBIAN/" + CONFFILES.getFilename();
     private static final String CONTROL_PATH = "deb/DEBIAN/" + CONTROL.getFilename();
@@ -73,11 +70,21 @@ public class DebianPackageMojoTest {
     private static final String PACKAGE_FINAL_FILENAME = ARTIFACTID + "-" + VERSION + DEBIAN_FILE_EXTENSION;
     private static final String SYSTEM_USERNAME = "myusername";
     private static final List<Developer> DEVELOPERS = new ArrayList<>();
-    private static final FolderEntry[] FOLDERS = new FolderEntry[]{new FolderEntry("/var/log/hiapp", CONFIGUSER, CONFIGGROUP, CONFIGMODE)};
+    private static final String FOLDER = "/var/log/hiapp";
+    private static final String TOP_LINK = SLASH.concat(LINK);
+    private static final String TOP_LINK_REL = DOT.concat(TOP_LINK);
+    private static final String DEEP_LINK = "/usr/local/bin";
+    private static final String DEEP_LINK_REL = DOT.concat(DEEP_LINK);
+    private static final String DEEP_LINK_TARGET = "../../bin";
+    private static final FolderEntry[] FOLDERS = new FolderEntry[]{new FolderEntry(FOLDER, CONFIGUSER, CONFIGGROUP, CONFIGMODE)};
+    private static final LinkEntry[] LINKS = new LinkEntry[]{
+            new LinkEntry(TOP_LINK, LINK_TARGET, null, null, null),
+            new LinkEntry(DEEP_LINK, DEEP_LINK_TARGET, SYSTEM_USERNAME, CONFIGGROUP, CONFIGMODE)
+    };
     private static final String DEP_FILEPATH = "./opt/hiapp/" + DEP_ARTIFACTID + ".jar";
     private static final String ART_GROUP = CONFIGGROUP;
     private static final String ART_USER = "bin";
-    private static final ArtifactPackageEntry[] ARTIFACTS = new ArtifactPackageEntry[]{new ArtifactPackageEntry(DEP_ARTIFACTID, DEP_GROUPID, DEP_PACKAGING, DEP_DESTINATION, ART_USER, ART_GROUP, CONFIGMODE)};
+    private static final ArtifactPackageEntry[] ARTIFACTS = new ArtifactPackageEntry[]{new ArtifactPackageEntry(DEP_ARTIFACTID, DEP_GROUPID, DEP_PACKAGING, DEP_DESTINATION_DIR, ART_USER, ART_GROUP, CONFIGMODE)};
     private static final DefaultArtifact DEP_ARTIFACT = new DefaultArtifact(DEP_GROUPID, DEP_ARTIFACTID, DEP_VERSION, "compile", DEP_PACKAGING, null, new DefaultArtifactHandler(DEP_PACKAGING));
     private static final Log PLUGIN_LOGGER = new Slf4jLogImpl();
     private static final File SOURCE_DEB_RESOURCES_DIR = new File(BASEDIR, DEBIAN_RESOURCES_DIR_NAME);
@@ -97,7 +104,7 @@ public class DebianPackageMojoTest {
         developer.setName(MODEL_MAINTAINER_NAME);
         developer.setEmail(MODEL_MAINTAINER_EMAIL);
         DEVELOPERS.add(developer);
-        DEP_ARTIFACT.setFile(new File("src/test/data/hiapp-1.0.0.jar"));
+        DEP_ARTIFACT.setFile(new File("src/test/data/".concat(ART_FILENAME)));
     }
 
     private Model model;
@@ -166,7 +173,33 @@ public class DebianPackageMojoTest {
     }
 
     @Test
-    public void testExecuteWithSymLink() throws Exception {
+    public void testExecuteWithSymLinks() throws Exception {
+        FileUtils.copyDirectoryStructure(SOURCE_DEB_RESOURCES_DIR, DESTINATION_DEB_RESOURCES_DIR);
+        ArtifactRepositoryLayout layout = new DefaultRepositoryLayout();
+        LOGGER.debug("PATH = {}", layout.pathOf(DEP_ARTIFACT));
+        this.project.setFile(PROJECT_FILE);
+        this.mojo.setLinks(LINKS);
+        this.mojo.execute();
+        File artifactFile = this.project.getArtifact().getFile();
+        assertEquals(PACKAGE_FINAL_FILENAME, artifactFile.getName());
+        DebInfo debianInfo = new DebInfo(artifactFile, PLUGIN_LOGGER);
+        LOGGER.debug(debianInfo.toString());
+        DebInfoTest.assertControl(debianInfo, new String[]{CONFFILES.getFilename(), CONTROL.getFilename(), POST_INSTALL.getFilename()});
+        assertEquals(10, debianInfo.getDataFiles().size());
+        assertLinkInArchiveEntries(TOP_LINK_REL, LINK_TARGET, debianInfo.getDataFiles(), DEFAULT_USERNAME, DEFAULT_GROUPNAME, DEFAULT_DIRMODE_VALUE);
+        assertLinkInArchiveEntries(DEEP_LINK_REL, DEEP_LINK_TARGET, debianInfo.getDataFiles(), SYSTEM_USERNAME, CONFIGGROUP, CONFIGMODE_VALUE);
+        assertInPackage(debianInfo, CONFIG_FOLDERPATH, DEFAULT_USERNAME, DEFAULT_GROUPNAME, DEFAULT_DIRMODE_VALUE);
+        assertEquals(FILE_PACKAGENAME, debianInfo.getControl().getPackageName());
+        assertEquals(FILE_VERSION, debianInfo.getControl().getVersion());
+        assertEquals(FILE_ARCHITECTURE, debianInfo.getControl().getArchitecture());
+        assertEquals(FILE_MAINTAINER, debianInfo.getControl().getMaintainer());
+        assertEquals(FILE_DESCR_SYNOPSIS, debianInfo.getControl().getDescriptionSynopsis());
+        assertEquals(FILE_DESCRIPTION, debianInfo.getControl().getDescription());
+        assertEquals(0, debianInfo.getControl().getInstalledSize());
+    }
+
+    @Test
+    public void testExecuteWithSymLinkOnFilesystem() throws Exception {
         FileUtils.copyDirectoryStructure(SOURCE_DEB_RESOURCES_DIR, DESTINATION_DEB_RESOURCES_DIR);
         Files.createSymbolicLink(DESTINATION_DEB_RESOURCES_DIR.toPath().resolve(LINK), Paths.get(LINK_TARGET));
         ArtifactRepositoryLayout layout = new DefaultRepositoryLayout();
@@ -179,7 +212,7 @@ public class DebianPackageMojoTest {
         LOGGER.debug(debianInfo.toString());
         DebInfoTest.assertControl(debianInfo, new String[]{CONFFILES.getFilename(), CONTROL.getFilename(), POST_INSTALL.getFilename()});
         assertEquals(7, debianInfo.getDataFiles().size());
-        assertLinkInDataFiles("./".concat(LINK), LINK_TARGET, debianInfo.getDataFiles());
+        assertLinkInArchiveEntries(TOP_LINK_REL, LINK_TARGET, debianInfo.getDataFiles(), DEFAULT_USERNAME, DEFAULT_GROUPNAME, DEFAULT_DIRMODE_VALUE);
         assertInPackage(debianInfo, CONFIG_FOLDERPATH, DEFAULT_USERNAME, DEFAULT_GROUPNAME, DEFAULT_DIRMODE_VALUE);
         assertEquals(FILE_PACKAGENAME, debianInfo.getControl().getPackageName());
         assertEquals(FILE_VERSION, debianInfo.getControl().getVersion());
@@ -188,19 +221,6 @@ public class DebianPackageMojoTest {
         assertEquals(FILE_DESCR_SYNOPSIS, debianInfo.getControl().getDescriptionSynopsis());
         assertEquals(FILE_DESCRIPTION, debianInfo.getControl().getDescription());
         assertEquals(0, debianInfo.getControl().getInstalledSize());
-    }
-
-    private void assertLinkInDataFiles(String linkName, String linkTarget, Collection<ArchiveEntry> dataFiles) {
-        boolean found = false;
-        for (ArchiveEntry dataFile : dataFiles) {
-            if (ArchiveEntry.ArchiveEntryType.S.equals(dataFile.getType())) {
-                SymbolicLinkArchiveEntry symlink = (SymbolicLinkArchiveEntry) dataFile;
-                assertEquals(linkName, symlink.getName());
-                assertEquals(linkTarget, symlink.getTarget());
-                found = true;
-            }
-        }
-        assertTrue(found);
     }
 
     @Test
@@ -234,6 +254,10 @@ public class DebianPackageMojoTest {
         LOGGER.debug(debianInfo.toString());
         DebInfoTest.assertControl(debianInfo, new String[]{CONFFILES.getFilename(), CONTROL.getFilename(), POST_INSTALL.getFilename()});
         assertEquals(9, debianInfo.getDataFiles().size());
+        File folder = new File("./".concat(FOLDER));
+        assertDirectoryInArchiveEntries(String.valueOf(folder), debianInfo.getDataFiles(), CONFIGUSER, CONFIGGROUP, CONFIGMODE_VALUE);
+        assertDirectoryInArchiveEntries(folder.getParent(), debianInfo.getDataFiles(), DEFAULT_USERNAME, DEFAULT_GROUPNAME, DEFAULT_DIRMODE_VALUE);
+        assertDirectoryInArchiveEntries(folder.getParentFile().getParent(), debianInfo.getDataFiles(), DEFAULT_USERNAME, DEFAULT_GROUPNAME, DEFAULT_DIRMODE_VALUE);
         assertEquals(FILE_PACKAGENAME, debianInfo.getControl().getPackageName());
         assertEquals(FILE_VERSION, debianInfo.getControl().getVersion());
         assertEquals(FILE_ARCHITECTURE, debianInfo.getControl().getArchitecture());
@@ -246,10 +270,12 @@ public class DebianPackageMojoTest {
     @Test
     public void testExecuteFull() throws Exception {
         FileUtils.copyDirectoryStructure(SOURCE_DEB_RESOURCES_DIR, DESTINATION_DEB_RESOURCES_DIR);
+        Files.createSymbolicLink(DESTINATION_DEB_RESOURCES_DIR.toPath().resolve(LINK), Paths.get(LINK_TARGET));
         this.model.setDevelopers(DEVELOPERS);
         assertTrue(new File(RESOURCES_DIR, CONTROL_PATH).delete());
         this.mojo.setFolders(FOLDERS);
-        Set<Artifact> deps = new HashSet<Artifact>();
+        this.mojo.setLinks(LINKS);
+        Set<Artifact> deps = new HashSet<>();
         deps.add(DEP_ARTIFACT);
         this.project.setDependencyArtifacts(deps);
         this.mojo.setArtifacts(ARTIFACTS);
@@ -261,7 +287,9 @@ public class DebianPackageMojoTest {
         DebInfo debianInfo = new DebInfo(this.project.getArtifact().getFile(), PLUGIN_LOGGER);
         LOGGER.debug(debianInfo.toString());
         DebInfoTest.assertControl(debianInfo, new String[]{CONFFILES.getFilename(), CONTROL.getFilename(), POST_INSTALL.getFilename()});
-        assertEquals(12, debianInfo.getDataFiles().size());
+        assertEquals(16, debianInfo.getDataFiles().size());
+        assertLinkInArchiveEntries(TOP_LINK_REL, LINK_TARGET, debianInfo.getDataFiles(), DEFAULT_USERNAME, DEFAULT_GROUPNAME, DEFAULT_DIRMODE_VALUE);
+        assertLinkInArchiveEntries(DEEP_LINK_REL, DEEP_LINK_TARGET, debianInfo.getDataFiles(), SYSTEM_USERNAME, CONFIGGROUP, CONFIGMODE_VALUE);
         assertInPackage(debianInfo, DEP_FILEPATH, ART_USER, ART_GROUP, CONFIGMODE_VALUE);
         assertEquals(ARTIFACTID, debianInfo.getControl().getPackageName());
         assertEquals(VERSION, debianInfo.getControl().getVersion());
@@ -277,10 +305,34 @@ public class DebianPackageMojoTest {
     }
 
     @Test
+    public void testExecuteWithArtifactNoAtts() throws Exception {
+        ArtifactPackageEntry[] atrifacts = new ArtifactPackageEntry[]{new ArtifactPackageEntry(DEP_ARTIFACTID, DEP_GROUPID, DEP_PACKAGING, DEP_DESTINATION_DIR, null, null, null)};
+        FileUtils.copyDirectoryStructure(SOURCE_DEB_RESOURCES_DIR, DESTINATION_DEB_RESOURCES_DIR);
+        this.project.setFile(PROJECT_FILE);
+        Set<Artifact> deps = new HashSet<>();
+        deps.add(DEP_ARTIFACT);
+        this.project.setDependencyArtifacts(deps);
+        this.mojo.setArtifacts(atrifacts);
+        this.mojo.execute();
+        DebInfo debianInfo = new DebInfo(this.project.getArtifact().getFile(), PLUGIN_LOGGER);
+        LOGGER.debug(debianInfo.toString());
+        DebInfoTest.assertControl(debianInfo, new String[]{CONFFILES.getFilename(), CONTROL.getFilename(), POST_INSTALL.getFilename()});
+        assertEquals(9, debianInfo.getDataFiles().size());
+        assertInPackage(debianInfo, DEP_FILEPATH, DEFAULT_USERNAME, DEFAULT_GROUPNAME, DEFAULT_FILEMODE_VALUE);
+        assertEquals(FILE_PACKAGENAME, debianInfo.getControl().getPackageName());
+        assertEquals(FILE_VERSION, debianInfo.getControl().getVersion());
+        assertEquals(FILE_ARCHITECTURE, debianInfo.getControl().getArchitecture());
+        assertEquals(FILE_MAINTAINER, debianInfo.getControl().getMaintainer());
+        assertEquals(FILE_DESCR_SYNOPSIS, debianInfo.getControl().getDescriptionSynopsis());
+        assertEquals(FILE_DESCRIPTION, debianInfo.getControl().getDescription());
+        assertEquals(0, debianInfo.getControl().getInstalledSize());
+    }
+
+    @Test
     public void testExecuteWithArtifact() throws Exception {
         FileUtils.copyDirectoryStructure(SOURCE_DEB_RESOURCES_DIR, DESTINATION_DEB_RESOURCES_DIR);
         this.project.setFile(PROJECT_FILE);
-        Set<Artifact> deps = new HashSet<Artifact>();
+        Set<Artifact> deps = new HashSet<>();
         deps.add(DEP_ARTIFACT);
         this.project.setDependencyArtifacts(deps);
         this.mojo.setArtifacts(ARTIFACTS);
@@ -289,6 +341,10 @@ public class DebianPackageMojoTest {
         LOGGER.debug(debianInfo.toString());
         DebInfoTest.assertControl(debianInfo, new String[]{CONFFILES.getFilename(), CONTROL.getFilename(), POST_INSTALL.getFilename()});
         assertEquals(9, debianInfo.getDataFiles().size());
+        File artifactFile = new File("./".concat(DEP_DESTINATION_FILE));
+        assertFileInArchiveEntries(String.valueOf(artifactFile), 2626, debianInfo.getDataFiles(), ART_USER, ART_GROUP, CONFIGMODE_VALUE);
+        assertDirectoryInArchiveEntries(artifactFile.getParent(), debianInfo.getDataFiles(), DEFAULT_USERNAME, DEFAULT_GROUPNAME, DEFAULT_DIRMODE_VALUE);
+        assertDirectoryInArchiveEntries(artifactFile.getParentFile().getParent(), debianInfo.getDataFiles(), DEFAULT_USERNAME, DEFAULT_GROUPNAME, DEFAULT_DIRMODE_VALUE);
         assertInPackage(debianInfo, DEP_FILEPATH, ART_USER, ART_GROUP, CONFIGMODE_VALUE);
         assertEquals(FILE_PACKAGENAME, debianInfo.getControl().getPackageName());
         assertEquals(FILE_VERSION, debianInfo.getControl().getVersion());
@@ -299,7 +355,7 @@ public class DebianPackageMojoTest {
         assertEquals(0, debianInfo.getControl().getInstalledSize());
     }
 
-    @Test(expected = MojoFailureException.class)
+    @Test(expected = DebianMojoException.class)
     public void testExecuteWithArtifactDepNotFound() throws Exception {
         FileUtils.copyDirectoryStructure(SOURCE_DEB_RESOURCES_DIR, DESTINATION_DEB_RESOURCES_DIR);
         this.project.setFile(PROJECT_FILE);
@@ -307,7 +363,7 @@ public class DebianPackageMojoTest {
         this.mojo.execute();
     }
 
-    @Test(expected = MojoFailureException.class)
+    @Test(expected = DebianMojoException.class)
     public void testExecuteWithArtifactDepWrongType() throws Exception {
         FileUtils.copyDirectoryStructure(SOURCE_DEB_RESOURCES_DIR, DESTINATION_DEB_RESOURCES_DIR);
         this.project.setFile(PROJECT_FILE);
@@ -456,7 +512,7 @@ public class DebianPackageMojoTest {
     @Test
     public void testExecuteOnlyArtifact() throws Exception {
         this.project.setFile(PROJECT_FILE);
-        Set<Artifact> deps = new HashSet<Artifact>();
+        Set<Artifact> deps = new HashSet<>();
         deps.add(DEP_ARTIFACT);
         this.project.setDependencyArtifacts(deps);
         this.mojo.setArtifacts(ARTIFACTS);
@@ -516,16 +572,70 @@ public class DebianPackageMojoTest {
         assertEquals(2, this.mojo.getSizeKB(1025));
     }
 
+    private void assertAttributes(String username, String groupname, int mode, ArchiveEntry entry) {
+        assertEquals(username, entry.getUserName());
+        assertEquals(groupname, entry.getGroupName());
+        assertEquals(mode, entry.getMode());
+    }
+
     private void assertInPackage(DebInfo debianInfo, String name, String username, String groupname, int mode) {
-        boolean checked = false;
+        boolean found = false;
         for (ArchiveEntry entry : debianInfo.getDataFiles()) {
             if (name.equals(entry.getName())) {
-                checked = true;
-                assertEquals(username, entry.getUserName());
-                assertEquals(groupname, entry.getGroupName());
-                assertEquals(mode, entry.getMode());
+                assertAttributes(username, groupname, mode, entry);
+                found = true;
             }
         }
-        assertTrue(checked);
+        assertTrue(found);
     }
+
+    private void assertLinkInArchiveEntries(String linkName, String linkTarget, Collection<ArchiveEntry> dataFiles, String username, String groupname, int mode) {
+        assertInArchiveEntries(linkName, linkTarget, INVALID_SIZE, dataFiles, ArchiveEntryType.S, username, groupname, mode);
+    }
+
+    private void assertFileInArchiveEntries(String name, long size, Collection<ArchiveEntry> dataFiles, String username, String groupname, int mode) {
+        assertInArchiveEntries(name, null, size, dataFiles, ArchiveEntryType.F, username, groupname, mode);
+    }
+
+    private void assertDirectoryInArchiveEntries(String name, Collection<ArchiveEntry> dataFiles, String username, String groupname, int mode) {
+        assertInArchiveEntries(name.concat("/"), null, INVALID_SIZE, dataFiles, ArchiveEntryType.D, username, groupname, mode);
+    }
+
+    private void assertInArchiveEntries(String name, String link, long size, Collection<ArchiveEntry> entries, ArchiveEntryType type, String username,
+                                        String groupname, int mode) {
+        boolean found = false;
+        for (ArchiveEntry entry : entries) {
+            if(name.equals(entry.getName())) {
+                switch (type) {
+                    case S:
+                        if (ArchiveEntryType.S.equals(entry.getType())) {
+                            SymbolicLinkArchiveEntry symlink = (SymbolicLinkArchiveEntry) entry;
+                            assertEquals(link, symlink.getTarget());
+                            assertAttributes(username, groupname, mode, symlink);
+                            found = true;
+                        }
+                        break;
+                    case D:
+                        if (ArchiveEntryType.D.equals(entry.getType())) {
+                            DirectoryArchiveEntry dir = (DirectoryArchiveEntry) entry;
+                            assertAttributes(username, groupname, mode, dir);
+                            found = true;
+                        }
+                        break;
+                    case F:
+                        if (ArchiveEntryType.F.equals(entry.getType())) {
+                            FileArchiveEntry file = (FileArchiveEntry) entry;
+                            assertEquals(size, file.getSize());
+                            assertAttributes(username, groupname, mode, file);
+                            found = true;
+                        }
+                        break;
+                    default:
+                        fail(name.concat(" not found"));
+                }
+            }
+        }
+        assertTrue(found);
+    }
+
 }
