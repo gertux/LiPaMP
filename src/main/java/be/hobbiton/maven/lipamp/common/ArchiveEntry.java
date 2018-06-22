@@ -4,17 +4,10 @@ import org.codehaus.plexus.util.StringUtils;
 
 import java.io.File;
 
+import static be.hobbiton.maven.lipamp.common.Constants.INVALID_MODE;
+import static be.hobbiton.maven.lipamp.common.Constants.INVALID_SIZE;
+
 public class ArchiveEntry {
-    public static final String DOT = ".";
-    public static final String SLASH = "/";
-    public static final String DEFAULT_USERNAME = "root";
-    public static final String DEFAULT_GROUPNAME = "root";
-    public static final String DEFAULT_FILEMODE = "0644";
-    public static final int DEFAULT_FILEMODE_VALUE = Integer.parseInt(DEFAULT_FILEMODE, 8);
-    public static final String DEFAULT_DIRMODE = "0755";
-    public static final int DEFAULT_DIRMODE_VALUE = Integer.parseInt(DEFAULT_DIRMODE, 8);
-    public static final int INVALID_MODE = -1;
-    public static final long INVALID_SIZE = -1L;
     private static final char[] OCHARS = {'r', 'x', 'w'};
     private String name;
     private String absoluteName;
@@ -36,6 +29,15 @@ public class ArchiveEntry {
         this.type = type;
     }
 
+    public static String stringValueOrDefault(String value, String defaultValue) {
+        return (StringUtils.isNotBlank(value)) ? value.trim() : defaultValue;
+    }
+
+    public static int modeValueOrDefault(int value, int defaultValue) {
+        return (value > 0) ? value : defaultValue;
+    }
+
+
     static String getModeString(ArchiveEntryType type, int mode) {
         StringBuilder sb = new StringBuilder();
         sb.append(type.getRep());
@@ -56,7 +58,11 @@ public class ArchiveEntry {
                 return INVALID_MODE;
             }
         }
-        return (modeValue>0) ? modeValue : INVALID_MODE;
+        return (modeValue > 0) ? modeValue : INVALID_MODE;
+    }
+
+    public static String fromMode(int mode) {
+        return Integer.toString(mode, 8);
     }
 
     private String getAbsoluteName(String name) {

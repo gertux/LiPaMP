@@ -17,8 +17,7 @@ public class ArtifactPackageEntry extends Attributable {
         super();
     }
 
-    public ArtifactPackageEntry(String artifactId, String groupId, String type, String destination, String username,
-            String groupname, String mode) {
+    public ArtifactPackageEntry(String artifactId, String groupId, String type, String destination, String username, String groupname, String mode) {
         super();
         this.artifactId = artifactId;
         this.groupId = groupId;
@@ -67,8 +66,8 @@ public class ArtifactPackageEntry extends Attributable {
     }
 
     public boolean isValid() {
-        return (StringUtils.isNotBlank(this.artifactId)) && (StringUtils.isNotBlank(this.groupId))
-                && (StringUtils.isNotBlank(this.type)) && (StringUtils.isNotBlank(this.destination));
+        return (StringUtils.isNotBlank(this.artifactId)) && (StringUtils.isNotBlank(this.groupId)) && (StringUtils.isNotBlank(this.type)) && (StringUtils
+                .isNotBlank(this.destination));
     }
 
     public boolean matches(Artifact a) {

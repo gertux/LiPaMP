@@ -1,25 +1,16 @@
 package be.hobbiton.maven.lipamp.deb;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
+import org.apache.maven.plugin.logging.Log;
+import org.codehaus.plexus.util.StringUtils;
+
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.maven.plugin.logging.Log;
-import org.codehaus.plexus.util.StringUtils;
+import static be.hobbiton.maven.lipamp.common.Constants.INVALID_SIZE;
 
 public class DebianControl {
-    public static final long INVALID_SIZE = -1L;
     private static final String FOLDED_FORMAT = " %s\n";
     private static final String SIMPLE_FIELD_FORMAT = "%s: %s\n";
     private static final String DECIMAL_FIELD_FORMAT = "%s: %d\n";
@@ -63,8 +54,7 @@ public class DebianControl {
             writeNotEmptyTextField(writer, DebianControlField.SECTION, this.section);
             writeNotEmptyTextField(writer, DebianControlField.PRIORITY, this.priority);
             if (this.installedSize > INVALID_SIZE) {
-                writer.write(String.format(DECIMAL_FIELD_FORMAT, DebianControlField.INSTALLED_SIZE.getFieldname(),
-                        this.installedSize));
+                writer.write(String.format(DECIMAL_FIELD_FORMAT, DebianControlField.INSTALLED_SIZE.getFieldname(), this.installedSize));
             }
             writeNotEmptyTextField(writer, DebianControlField.DEPENDS, this.depends);
             writeNotEmptyTextField(writer, DebianControlField.HOMEPAGE, this.homepage);
@@ -90,9 +80,8 @@ public class DebianControl {
     }
 
     public boolean isValid() {
-        return StringUtils.isNotBlank(this.packageName) && StringUtils.isNotBlank(this.version)
-                && StringUtils.isNotBlank(this.architecture) && StringUtils.isNotBlank(this.maintainer)
-                && StringUtils.isNotBlank(this.description) && StringUtils.isNotBlank(this.descriptionSynopsis);
+        return StringUtils.isNotBlank(this.packageName) && StringUtils.isNotBlank(this.version) && StringUtils.isNotBlank(this.architecture) && StringUtils
+                .isNotBlank(this.maintainer) && StringUtils.isNotBlank(this.description) && StringUtils.isNotBlank(this.descriptionSynopsis);
     }
 
     private final void parseControlFile(InputStream input) {
@@ -133,8 +122,7 @@ public class DebianControl {
         if (values != null) {
             values.add(line.trim());
         } else {
-            throw new DebianArchiveException(
-                    "Unable to read Control File continuation, unexpected line: " + line);
+            throw new DebianArchiveException("Unable to read Control File continuation, unexpected line: " + line);
         }
     }
 
@@ -172,44 +160,44 @@ public class DebianControl {
 
     private void saveSimpleField(List<String> values, DebianControlField field) {
         switch (field) {
-        case PACKAGE:
-            setPackageName(values.get(0));
-            break;
+            case PACKAGE:
+                setPackageName(values.get(0));
+                break;
 
-        case SECTION:
-            setSection(values.get(0));
-            break;
+            case SECTION:
+                setSection(values.get(0));
+                break;
 
-        case PRIORITY:
-            setPriority(values.get(0));
-            break;
+            case PRIORITY:
+                setPriority(values.get(0));
+                break;
 
-        case MAINTAINER:
-            setMaintainer(values.get(0));
-            break;
+            case MAINTAINER:
+                setMaintainer(values.get(0));
+                break;
 
-        case INSTALLED_SIZE:
-            setInstalledSize(getLongValue(values.get(0)));
-            break;
+            case INSTALLED_SIZE:
+                setInstalledSize(getLongValue(values.get(0)));
+                break;
 
-        case VERSION:
-            setVersion(values.get(0));
-            break;
+            case VERSION:
+                setVersion(values.get(0));
+                break;
 
-        case ARCHITECTURE:
-            setArchitecture(values.get(0));
-            break;
+            case ARCHITECTURE:
+                setArchitecture(values.get(0));
+                break;
 
-        case DEPENDS:
-            setDepends(values.get(0));
-            break;
+            case DEPENDS:
+                setDepends(values.get(0));
+                break;
 
-        case HOMEPAGE:
-            setHomepage(values.get(0));
-            break;
+            case HOMEPAGE:
+                setHomepage(values.get(0));
+                break;
 
-        default:
-            break;
+            default:
+                break;
         }
     }
 
@@ -310,17 +298,12 @@ public class DebianControl {
     }
 
     public enum DebianControlField {
-        DEPENDS("Depends"), ARCHITECTURE("Architecture"), VERSION("Version"), INSTALLED_SIZE(
-                "Installed-Size"), MAINTAINER("Maintainer"), PRIORITY("Priority"), SECTION("Section"), PACKAGE(
-                        "Package"), DESCRIPTION("Description"), HOMEPAGE("Homepage");
+        DEPENDS("Depends"), ARCHITECTURE("Architecture"), VERSION("Version"), INSTALLED_SIZE("Installed-Size"), MAINTAINER("Maintainer"), PRIORITY
+                ("Priority"), SECTION("Section"), PACKAGE("Package"), DESCRIPTION("Description"), HOMEPAGE("Homepage");
         private final String fieldname;
 
         DebianControlField(String n) {
             this.fieldname = n;
-        }
-
-        public final String getFieldname() {
-            return this.fieldname;
         }
 
         public static DebianControlField fromFieldname(String n) {
@@ -330,6 +313,10 @@ public class DebianControl {
                 }
             }
             throw new IllegalArgumentException("Unknown Field name: " + n);
+        }
+
+        public final String getFieldname() {
+            return this.fieldname;
         }
     }
 }

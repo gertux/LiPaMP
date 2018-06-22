@@ -19,7 +19,8 @@ public class AttributeSelector extends Attributable {
     }
 
     public boolean isValid() {
-        return (StringUtils.isNotBlank(this.expression)) && (this.config || StringUtils.isNotBlank(getUsername()) || StringUtils.isNotBlank(getGroupname()) || StringUtils.isNotBlank(getMode()));
+        return (StringUtils.isNotBlank(this.expression)) && (this.config || StringUtils.isNotBlank(getUsername()) || StringUtils.isNotBlank(getGroupname())
+                || StringUtils.isNotBlank(getMode()));
     }
 
     public String getExpression() {

@@ -9,4 +9,4 @@ a servlet runner like Tomcat or Jetty, ...
 In the (near) future the plugin will be able to generate RPM (RedHat, SuSe) and APK (Arch, Alpine) packages but 
 for the moment only the DEB (Debian, Ubuntu) format is implemented.
   
-The plugin documentation can be found at <http://www.hobbiton.be/docs/linux-packaging-maven-plugin/>
+The plugin documentation can be found at <http://pages.hobbiton.be/docs/linux-packaging-maven-plugin/>

@@ -10,11 +10,11 @@ public class ConfigFileSelector {
         this.expression = expression;
     }
 
-    public String getExpression() {
-        return expression;
-    }
-
     public static ConfigFileSelector fromAttributeSelector(AttributeSelector attributeSelector) {
         return new ConfigFileSelector(attributeSelector.getExpression());
+    }
+
+    public String getExpression() {
+        return expression;
     }
 }

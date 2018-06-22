@@ -1,9 +1,6 @@
 package be.hobbiton.maven.lipamp.plugin;
 
-import be.hobbiton.maven.lipamp.common.ArchiveEntry;
-import be.hobbiton.maven.lipamp.common.DirectoryArchiveEntry;
-import be.hobbiton.maven.lipamp.common.FileArchiveEntry;
-import be.hobbiton.maven.lipamp.common.SymbolicLinkArchiveEntry;
+import be.hobbiton.maven.lipamp.common.*;
 import be.hobbiton.maven.lipamp.deb.DebianControl;
 import be.hobbiton.maven.lipamp.deb.DebianPackage;
 import org.apache.maven.artifact.Artifact;
@@ -30,6 +27,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static be.hobbiton.maven.lipamp.common.ArchiveEntry.*;
+import static be.hobbiton.maven.lipamp.common.Constants.*;
 import static be.hobbiton.maven.lipamp.deb.DebInfo.DebianInfoFile.CONFFILES;
 import static be.hobbiton.maven.lipamp.deb.DebInfo.DebianInfoFile.CONTROL;
 
@@ -53,9 +51,6 @@ public class DebianPackageMojo extends AbstractMojo {
      */
     protected static final String DEFAULT_ARCHITECTURE = "all";
     protected static final String SNAPSHOT_SUFFIX = "-SNAPSHOT";
-    private static final String CURRENT_PATH_ELEM = DOT;
-    private static final Path CURRENT_PATH = Paths.get(CURRENT_PATH_ELEM);
-    private static final Path ROOT_PATH = Paths.get(SLASH);
     /**
      * The Maven project
      */
@@ -228,6 +223,34 @@ public class DebianPackageMojo extends AbstractMojo {
     private LinkEntry[] links;
 
     /**
+     * Add the project's dependencies
+     *
+     * <pre>
+     * &lt;dependencies>
+     *     &lt;destination>/opt/lib/</destination>
+     *     &lt;username>hiuser</username>
+     *     &lt;groupname>wheel</groupname>
+     *     &lt;mode>0700</mode>
+     *     &lt;type>maven</type>
+     * &lt;/dependencies>
+     * </pre>
+     * <p>
+     * username is optional, default value = root<br>
+     * groupname is optional, default value = root<br>
+     * mode is optional, default value = 0755<br>
+     * type is optional, default value = maven<br>
+     * type can be:
+     * <ul>
+     * <li>maven: maven repo style directories</li>
+     * <li>flat: all files in the destination directory</li>
+     * </ul>
+     *
+     * @since 1.2.0
+     */
+    @Parameter
+    private Dependencies dependencies;
+
+    /**
      * Change file and folder attributes using an Ant or Regex style file matcher
      *
      * <pre>
@@ -305,7 +328,9 @@ public class DebianPackageMojo extends AbstractMojo {
         TreeSet<ArchiveEntry> dataArchiveEntries = new TreeSet<>(Comparator.comparing(ArchiveEntry::getName));
         dataArchiveEntries.addAll(getLinkEntries());
         dataArchiveEntries.addAll(getFolderEntries());
+        Set<Artifact> configuredArtifacts = getArtifacts();
         dataArchiveEntries.addAll(getArtifactEntries());
+        dataArchiveEntries.addAll(getDependencies(configuredArtifacts));
         dataArchiveEntries.addAll(collectDataArchiveEntries(this.packageBasePath));
         if (dataArchiveEntries.size() <= 1) {
             throw new MojoFailureException("Useless build, nothing to package");
@@ -351,32 +376,43 @@ public class DebianPackageMojo extends AbstractMojo {
     }
 
     private void configure() throws MojoFailureException, MojoExecutionException {
-        configureAttributeSelectors();
+        this.defaultUsername = stringValueOrDefault(this.defaultUsername, DEFAULT_USERNAME);
+        this.defaultGroupname = stringValueOrDefault(this.defaultGroupname, DEFAULT_GROUPNAME);
         this.defaultDirectoryModeValue = modeValueOrDefault(ArchiveEntry.fromModeString(this.defaultDirectoryMode), DEFAULT_DIRMODE_VALUE);
         this.defaultFileModeValue = modeValueOrDefault(ArchiveEntry.fromModeString(this.defaultFileMode), DEFAULT_FILEMODE_VALUE);
         this.packageBasePath = this.resourcesDirectory.toPath().resolve(DEBIAN_RESOURCES_DIR_NAME);
         this.debianControlFilesBasePath = packageBasePath.resolve(DEBIAN_CONTROL_FILES_DIR_PATH);
+        configureAttributeSelectors();
+        configureDependencies();
         createFolderIfMissing(this.debianControlFilesBasePath);
     }
 
+    private void configureDependencies() {
+        if (this.dependencies != null) {
+            this.dependencies.setUsername(stringValueOrDefault(this.dependencies.getUsername(), this.defaultUsername));
+            this.dependencies.setGroupname(stringValueOrDefault(this.dependencies.getGroupname(), this.defaultGroupname));
+            this.dependencies.setModeValue(modeValueOrDefault(this.dependencies.getModeValue(), this.defaultFileModeValue));
+            this.dependencies.setDirModeValue(modeValueOrDefault(this.dependencies.getDirModeValue(), this.defaultDirectoryModeValue));
+        }
+    }
+
     private List<ArchiveEntry> getLinkEntries() {
-        if(this.links != null) {
+        if (this.links != null) {
             return Arrays.stream(this.links).flatMap(this::toArchiveEntries).collect(Collectors.toList());
         }
-        return new ArrayList<>();
+        return Collections.emptyList();
     }
 
     private Stream<ArchiveEntry> toArchiveEntries(LinkEntry linkEntry) {
         List<ArchiveEntry> archiveEntries = new ArrayList<>();
-        if(linkEntry.isValid()) {
+        if (linkEntry.isValid()) {
             Path destPath = Paths.get(linkEntry.getPath());
             if (destPath.startsWith(ROOT_PATH)) {
                 destPath = ROOT_PATH.relativize(destPath);
             }
             archiveEntries.addAll(getParentEntries(destPath.getParent()));
-            archiveEntries.add(new SymbolicLinkArchiveEntry(String.valueOf(CURRENT_PATH.resolve(destPath)), linkEntry.getTarget(),
-                    stringValueOrDefault(linkEntry.getUsername(), this.defaultUsername),
-                    stringValueOrDefault(linkEntry.getGroupname(), this.defaultGroupname),
+            archiveEntries.add(new SymbolicLinkArchiveEntry(String.valueOf(CURRENT_PATH.resolve(destPath)), linkEntry.getTarget(), stringValueOrDefault
+                    (linkEntry.getUsername(), this.defaultUsername), stringValueOrDefault(linkEntry.getGroupname(), this.defaultGroupname),
                     modeValueOrDefault(linkEntry.getModeValue(), this.defaultDirectoryModeValue)));
         }
         return archiveEntries.stream();
@@ -386,7 +422,7 @@ public class DebianPackageMojo extends AbstractMojo {
         if (this.folders != null) {
             return Arrays.stream(this.folders).flatMap(this::toArchiveEntries).collect(Collectors.toList());
         }
-        return new ArrayList<>();
+        return Collections.emptyList();
     }
 
     private Stream<ArchiveEntry> toArchiveEntries(FolderEntry folderEntry) {
@@ -397,33 +433,60 @@ public class DebianPackageMojo extends AbstractMojo {
                 destPath = ROOT_PATH.relativize(destPath);
             }
             archiveEntries.addAll(getParentEntries(destPath.getParent()));
-            archiveEntries.add(new DirectoryArchiveEntry(String.valueOf(CURRENT_PATH.resolve(destPath)),
-                    stringValueOrDefault(folderEntry.getUsername(), this.defaultUsername),
-                    stringValueOrDefault(folderEntry.getGroupname(), this.defaultGroupname),
-                    modeValueOrDefault(folderEntry.getModeValue(), this.defaultDirectoryModeValue)));
+            archiveEntries.add(new DirectoryArchiveEntry(String.valueOf(CURRENT_PATH.resolve(destPath)), stringValueOrDefault(folderEntry.getUsername(), this
+                    .defaultUsername), stringValueOrDefault(folderEntry.getGroupname(), this.defaultGroupname), modeValueOrDefault(folderEntry.getModeValue()
+                    , this.defaultDirectoryModeValue)));
         }
         return archiveEntries.stream();
     }
 
     private List<ArchiveEntry> getParentEntries(Path parent) {
         List<ArchiveEntry> archiveEntries = new ArrayList<>();
-        if(parent != null) {
+        if (parent != null) {
             Path dir = Paths.get("");
             for (Path pathElem : parent) {
                 dir = dir.resolve(pathElem);
-                archiveEntries.add(toArchiveEntry(dir, null, null, ArchiveEntry.ArchiveEntryType.D));
+                ArchiveEntry archiveEntry = toArchiveEntry(dir, null, null, ArchiveEntryType.D);
+                archiveEntries.add(archiveEntry);
             }
         }
         return archiveEntries;
     }
 
+    private List<ArchiveEntry> getDependencies(Set<Artifact> configuredArtifacts) {
+        if (this.dependencies != null) {
+            ArtifactStore artifactStore = this.dependencies.getArtifactStore(this.defaultUsername, this.defaultGroupname, this.defaultFileModeValue, this
+                    .defaultDirectoryModeValue);
+            Set<Artifact> allDependencies = this.project.getArtifacts();
+            return allDependencies.stream().
+                    filter(a -> !(configuredArtifacts.contains(a))).
+                    flatMap(artifactStore::toArchiveEntries).
+                    collect(Collectors.toList());
+        }
+        return Collections.emptyList();
+    }
+
+    private Set<Artifact> getArtifacts() {
+        if (this.artifacts != null) {
+            return Arrays.stream(this.artifacts).
+                    map(this::getDependentArtifact).
+                    collect(Collectors.toSet());
+        }
+        return Collections.emptySet();
+    }
+
+    protected void setArtifacts(ArtifactPackageEntry[] artifacts) {
+        this.artifacts = artifacts;
+    }
+
     private List<ArchiveEntry> getArtifactEntries() {
         if (this.artifacts != null) {
-            return Arrays.stream(this.artifacts)
-                    .filter(ae -> StringUtils.isNotBlank(ae.getDestination()))
-                    .flatMap(this::toArchiveEntries).collect(Collectors.toList());
+            return Arrays.stream(this.artifacts).
+                    filter(ae -> StringUtils.isNotBlank(ae.getDestination())).
+                    flatMap(this::toArchiveEntries).
+                    collect(Collectors.toList());
         }
-        return new ArrayList<>();
+        return Collections.emptyList();
     }
 
     private Stream<ArchiveEntry> toArchiveEntries(ArtifactPackageEntry artifactEntry) {
@@ -439,11 +502,9 @@ public class DebianPackageMojo extends AbstractMojo {
             destPath = ROOT_PATH.relativize(destPath);
         }
         archiveEntries.addAll(getParentEntries(destPath.getParent()));
-        archiveEntries.add(new FileArchiveEntry(String.valueOf(CURRENT_PATH.resolve(destPath)),
-                depArtifact.getFile(),
-                stringValueOrDefault(artifactEntry.getUsername(), this.defaultUsername),
-                stringValueOrDefault(artifactEntry.getGroupname(), this.defaultGroupname),
-                modeValueOrDefault(artifactEntry.getModeValue(), this.defaultFileModeValue)));
+        archiveEntries.add(new FileArchiveEntry(String.valueOf(CURRENT_PATH.resolve(destPath)), depArtifact.getFile(), stringValueOrDefault(artifactEntry
+                .getUsername(), this.defaultUsername), stringValueOrDefault(artifactEntry.getGroupname(), this.defaultGroupname), modeValueOrDefault
+                (artifactEntry.getModeValue(), this.defaultFileModeValue)));
         return archiveEntries.stream();
     }
 
@@ -496,21 +557,23 @@ public class DebianPackageMojo extends AbstractMojo {
     }
 
     private ArchiveEntry toArchiveEntry(Path relpath) {
+        ArchiveEntry archiveEntry;
         Path path = packageBasePath.resolve(relpath);
         if (Files.isSymbolicLink(path)) {
-            return toArchiveEntry(relpath, null, getLinkTarget(path), ArchiveEntry.ArchiveEntryType.S);
+            archiveEntry = toArchiveEntry(relpath, null, getLinkTarget(path), ArchiveEntry.ArchiveEntryType.S);
         } else if (path.toFile().isDirectory()) {
-            return toArchiveEntry(relpath, null, null, ArchiveEntry.ArchiveEntryType.D);
+            archiveEntry = toArchiveEntry(relpath, null, null, ArchiveEntry.ArchiveEntryType.D);
         } else {
-            return toArchiveEntry(relpath, path, null, ArchiveEntry.ArchiveEntryType.F);
+            archiveEntry = toArchiveEntry(relpath, path, null, ArchiveEntry.ArchiveEntryType.F);
         }
+        return archiveEntry;
     }
 
     private String getLinkTarget(Path path) {
         try {
             return String.valueOf(Files.readSymbolicLink(path));
         } catch (IOException e) {
-            throw new DebianMojoException("Cannot read link information for ".concat(String.valueOf(path)), e);
+            throw new LinuxPackagingMojoException("Cannot read link information for ".concat(String.valueOf(path)), e);
         }
     }
 
@@ -533,16 +596,13 @@ public class DebianPackageMojo extends AbstractMojo {
             case D:
                 return new DirectoryArchiveEntry(String.valueOf(CURRENT_PATH.resolve(relpath)), userName, groupName, dirMode);
             default:
-                return new FileArchiveEntry(String.valueOf(CURRENT_PATH.resolve(relpath)), contents.toFile(), userName, groupName, fileMode);
+                if (contents != null) {
+                    File contentsFile = contents.toFile();
+                    return new FileArchiveEntry(String.valueOf(CURRENT_PATH.resolve(relpath)), contentsFile, userName, groupName, fileMode);
+                } else {
+                    throw new LinuxPackagingMojoException("No contents for file entry ".concat(relpath.toString()));
+                }
         }
-    }
-
-    private String stringValueOrDefault(String value, String defaultValue) {
-        return (StringUtils.isNotBlank(value)) ? value.trim() : defaultValue;
-    }
-
-    private int modeValueOrDefault(int value, int defaultValue) {
-        return (value > 0) ? value : defaultValue;
     }
 
     protected File getPackageFile() throws MojoExecutionException {
@@ -594,19 +654,19 @@ public class DebianPackageMojo extends AbstractMojo {
         return System.getProperty("user.name");
     }
 
-    private Artifact getDependentArtifact(ArtifactPackageEntry artifactEntry) throws DebianMojoException {
+    private Artifact getDependentArtifact(ArtifactPackageEntry artifactEntry) {
         Artifact dependentArtifact = null;
         if (artifactEntry.isValid()) {
             if (this.project.getDependencyArtifacts() != null) {
                 dependentArtifact = findDependentArtifact(artifactEntry);
             }
         } else {
-            throw new DebianMojoException("Invalid artifact specification");
+            throw new LinuxPackagingMojoException("Invalid artifact specification");
         }
         if (dependentArtifact != null) {
             return dependentArtifact;
         }
-        throw new DebianMojoException(String.format("Artifact %s not found", artifactEntry.toString()));
+        throw new LinuxPackagingMojoException(String.format("Artifact %s not found", artifactEntry.toString()));
     }
 
     private Artifact findDependentArtifact(ArtifactPackageEntry artifactEntry) {
@@ -617,17 +677,6 @@ public class DebianPackageMojo extends AbstractMojo {
             }
         }
         return null;
-    }
-
-    private int getMode(String mode, String path) throws MojoFailureException {
-        if (StringUtils.isBlank(mode)) {
-            return ArchiveEntry.INVALID_MODE;
-        }
-        try {
-            return Integer.parseInt(mode, 8);
-        } catch (NumberFormatException e) {
-            throw new MojoFailureException(String.format("Path \"%s\" is configured with an invalid mode %s", path, mode));
-        }
     }
 
     private boolean createFolderIfMissing(Path folderPath) throws MojoExecutionException {
@@ -702,10 +751,6 @@ public class DebianPackageMojo extends AbstractMojo {
         this.defaultGroupname = defaultGroupname;
     }
 
-    protected void setArtifacts(ArtifactPackageEntry[] artifacts) {
-        this.artifacts = artifacts;
-    }
-
     protected void setDescriptionSynopsis(String descriptionSynopsis) {
         this.descriptionSynopsis = descriptionSynopsis;
     }
@@ -756,5 +801,9 @@ public class DebianPackageMojo extends AbstractMojo {
 
     public void setResourcesDirectory(File resourcesDirectory) {
         this.resourcesDirectory = resourcesDirectory;
+    }
+
+    public void setDependencies(Dependencies dependencies) {
+        this.dependencies = dependencies;
     }
 }

@@ -1,5 +1,6 @@
 package be.hobbiton.maven.lipamp.deb;
 
+import static be.hobbiton.maven.lipamp.common.Constants.INVALID_SIZE;
 import static be.hobbiton.maven.lipamp.common.TestConstants.*;
 import static org.junit.Assert.*;
 
@@ -67,7 +68,7 @@ public class DebianControlTest {
         assertNull(control.getSection());
         assertNull(control.getPriority());
         assertEquals(FILE_MAINTAINER, control.getMaintainer());
-        assertEquals(DebianControl.INVALID_SIZE, control.getInstalledSize());
+        assertEquals(INVALID_SIZE, control.getInstalledSize());
         assertEquals(FILE_VERSION, control.getVersion());
         assertEquals(FILE_DESCR_SYNOPSIS, control.getDescriptionSynopsis());
         assertEquals(FILE_DESCRIPTION, control.getDescription());

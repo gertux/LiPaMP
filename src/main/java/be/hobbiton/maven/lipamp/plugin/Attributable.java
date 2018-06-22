@@ -36,4 +36,9 @@ public abstract class Attributable {
     public int getModeValue() {
         return modeValue;
     }
+
+    public void setModeValue(int modeValue) {
+        this.modeValue = modeValue;
+        this.mode = ArchiveEntry.fromMode(modeValue);
+    }
 }

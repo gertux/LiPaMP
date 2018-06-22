@@ -19,16 +19,15 @@ import org.apache.maven.plugin.logging.Log;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.stream.Collectors;
 
 import static be.hobbiton.maven.lipamp.common.ArchiveEntry.ArchiveEntryType.F;
+import static be.hobbiton.maven.lipamp.common.Constants.CURRENT_DIR;
+import static be.hobbiton.maven.lipamp.common.Constants.CURRENT_DIR_PATH;
 
 public class DebianPackage implements Packager {
-    public static final String CURRENT_DIR = "./";
-    public static final Path CURRENT_PATH = Paths.get(CURRENT_DIR);
     static final int DEFAULT_DIR_MODE = Integer.parseInt("755", 8);
     static final int DEFAULT_FILE_MODE = Integer.parseInt("644", 8);
     private static final String ROOTUSERNAME = "root";
@@ -64,11 +63,8 @@ public class DebianPackage implements Packager {
 
     private final void setControlPaths(Collection<Path> controlPaths) {
         if (controlPaths != null && !controlPaths.isEmpty()) {
-            this.controlFiles = controlPaths.stream()
-                    .filter(Files::isRegularFile)
-                    .map(path -> new FileArchiveEntry(CURRENT_PATH.resolve(path.getFileName()).toString(),
-                            path.toFile(), ROOTUSERNAME, ROOTGROUPNAME, DEFAULT_FILE_MODE))
-                    .collect(Collectors.toList());
+            this.controlFiles = controlPaths.stream().filter(Files::isRegularFile).map(path -> new FileArchiveEntry(CURRENT_DIR_PATH.resolve(path.getFileName
+                    ()).toString(), path.toFile(), ROOTUSERNAME, ROOTGROUPNAME, DEFAULT_FILE_MODE)).collect(Collectors.toList());
         } else {
             throw new IllegalArgumentException("Invalid control files");
         }
@@ -79,7 +75,8 @@ public class DebianPackage implements Packager {
             this.controlFiles = new ArrayList<>();
             for (File controlFile : controlFiles) {
                 if (controlFile.isFile()) {
-                    this.controlFiles.add(new ArchiveEntry(CURRENT_DIR + controlFile.getName(), controlFile, ROOTUSERNAME, ROOTGROUPNAME, DEFAULT_FILE_MODE, F));
+                    this.controlFiles.add(new ArchiveEntry(CURRENT_DIR + controlFile.getName(), controlFile, ROOTUSERNAME, ROOTGROUPNAME, DEFAULT_FILE_MODE,
+                            F));
                 } else {
                     throw new IllegalArgumentException("Invalid control file: " + controlFile.getName());
                 }
@@ -144,14 +141,14 @@ public class DebianPackage implements Packager {
     }
 
     private File writeControl() throws DebianPackageException {
-        if(logger.isDebugEnabled()) {
+        if (logger.isDebugEnabled()) {
             logger.debug("Writing control archive");
         }
         return writeCompressedArchive(this.controlFiles);
     }
 
     private File writeData() throws DebianPackageException {
-        if(logger.isDebugEnabled()) {
+        if (logger.isDebugEnabled()) {
             logger.debug("Writing data archive");
         }
         return writeCompressedArchive(this.dataFiles);
@@ -166,14 +163,14 @@ public class DebianPackage implements Packager {
 
     private File writeCompressedArchive(Collection<ArchiveEntry> archiveEntries) throws DebianPackageException {
         File outputFile = createTempDebianFile();
-            try (CompressorOutputStream gzippedOutput = new CompressorStreamFactory().createCompressorOutputStream(CompressorStreamFactory.GZIP, new FileOutputStream(outputFile));
-                 TarArchiveOutputStream tarOutput = writeTarArchive(archiveEntries, gzippedOutput)) {
-                return outputFile;
-            } catch (IOException e) {
-                throw new DebianPackageException("Cannot write compressed archive", e);
-            } catch (CompressorException e) {
-                throw new DebianPackageException("Cannot compress archive", e);
-            }
+        try (CompressorOutputStream gzippedOutput = new CompressorStreamFactory().createCompressorOutputStream(CompressorStreamFactory.GZIP, new
+                FileOutputStream(outputFile)); TarArchiveOutputStream tarOutput = writeTarArchive(archiveEntries, gzippedOutput)) {
+            return outputFile;
+        } catch (IOException e) {
+            throw new DebianPackageException("Cannot write compressed archive", e);
+        } catch (CompressorException e) {
+            throw new DebianPackageException("Cannot compress archive", e);
+        }
     }
 
     private File createTempDebianFile() throws DebianPackageException {
@@ -190,16 +187,17 @@ public class DebianPackage implements Packager {
                                                    CompressorOutputStream gzippedOutput) throws DebianPackageException, IOException {
         TarArchiveOutputStream tarOutput;
         tarOutput = new TarArchiveOutputStream(gzippedOutput);
+        tarOutput.setLongFileMode(TarArchiveOutputStream.LONGFILE_GNU);
         for (ArchiveEntry fileEntry : archiveEntries) {
-            if(logger.isDebugEnabled()) {
+            if (logger.isDebugEnabled()) {
                 logger.debug("Archiving ".concat(String.valueOf(fileEntry)));
             }
             TarArchiveEntry entry;
-            if(ArchiveEntryType.S.equals(fileEntry.getType())) {
+            if (ArchiveEntryType.S.equals(fileEntry.getType())) {
                 entry = new TarArchiveEntry(getTarName(fileEntry.getName()), TarConstants.LF_SYMLINK);
-                entry.setLinkName(((SymbolicLinkArchiveEntry)fileEntry).getTarget());
+                entry.setLinkName(((SymbolicLinkArchiveEntry) fileEntry).getTarget());
             } else {
-                 entry = new TarArchiveEntry(getTarName(fileEntry.getName()));
+                entry = new TarArchiveEntry(getTarName(fileEntry.getName()));
             }
             if (ArchiveEntryType.F.equals(fileEntry.getType())) {
                 checkContentsFile(fileEntry);

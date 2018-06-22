@@ -1,19 +1,10 @@
 package be.hobbiton.maven.lipamp.deb;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-
+import be.hobbiton.maven.lipamp.common.ArchiveEntry;
+import be.hobbiton.maven.lipamp.common.DirectoryArchiveEntry;
+import be.hobbiton.maven.lipamp.common.FileArchiveEntry;
 import be.hobbiton.maven.lipamp.common.SymbolicLinkArchiveEntry;
+import be.hobbiton.maven.lipamp.deb.DebianControl.DebianControlField;
 import org.apache.commons.compress.archivers.ArchiveException;
 import org.apache.commons.compress.archivers.ArchiveStreamFactory;
 import org.apache.commons.compress.archivers.ar.ArArchiveEntry;
@@ -26,10 +17,13 @@ import org.apache.commons.compress.compressors.CompressorStreamFactory;
 import org.apache.maven.plugin.logging.Log;
 import org.codehaus.plexus.util.StringUtils;
 
-import be.hobbiton.maven.lipamp.common.ArchiveEntry;
-import be.hobbiton.maven.lipamp.common.DirectoryArchiveEntry;
-import be.hobbiton.maven.lipamp.common.FileArchiveEntry;
-import be.hobbiton.maven.lipamp.deb.DebianControl.DebianControlField;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+
+import static be.hobbiton.maven.lipamp.common.Constants.INVALID_SIZE;
 
 /**
  * Debian binary package handler
@@ -37,7 +31,6 @@ import be.hobbiton.maven.lipamp.deb.DebianControl.DebianControlField;
  * Doesn't aim to be complete, just to be useful for binary Java based packages
  *
  * @author <a href="mailto:gert@hobbiton.be">Gert Dewit</a>
- *
  */
 public class DebInfo {
     private static final String CONTROL_SUFFIX = "/" + DebianInfoFile.CONTROL.getFilename();
@@ -82,11 +75,9 @@ public class DebInfo {
             this.controlFiles = new ArrayList<>();
             while (tarEntry != null) {
                 this.controlFiles.add(new File(tarEntry.getName()));
-                if (DebianInfoFile.CONTROL.getFilename().equals(tarEntry.getName())
-                        || tarEntry.getName().endsWith(CONTROL_SUFFIX)) {
+                if (DebianInfoFile.CONTROL.getFilename().equals(tarEntry.getName()) || tarEntry.getName().endsWith(CONTROL_SUFFIX)) {
                     this.control = new DebianControl(tar, this.logger);
-                } else if (DebianInfoFile.CONFFILES.getFilename().equals(tarEntry.getName())
-                        || tarEntry.getName().endsWith(CONFFILES_SUFFIX)) {
+                } else if (DebianInfoFile.CONFFILES.getFilename().equals(tarEntry.getName()) || tarEntry.getName().endsWith(CONFFILES_SUFFIX)) {
                     readConffiles(tar);
                 }
                 tarEntry = tar.getNextTarEntry();
@@ -126,14 +117,13 @@ public class DebInfo {
             this.dataFiles = new ArrayList<>();
             while (tarEntry != null) {
                 if (tarEntry.isSymbolicLink()) {
-                    this.dataFiles.add(new SymbolicLinkArchiveEntry(tarEntry.getName(), tarEntry.getLinkName(), tarEntry.getUserName(),
-                            tarEntry.getGroupName(), tarEntry.getMode()));
+                    this.dataFiles.add(new SymbolicLinkArchiveEntry(tarEntry.getName(), tarEntry.getLinkName(), tarEntry.getUserName(), tarEntry.getGroupName
+                            (), tarEntry.getMode()));
                 } else if (tarEntry.isDirectory()) {
-                    this.dataFiles.add(new DirectoryArchiveEntry(tarEntry.getName(), tarEntry.getUserName(),
-                            tarEntry.getGroupName(), tarEntry.getMode()));
+                    this.dataFiles.add(new DirectoryArchiveEntry(tarEntry.getName(), tarEntry.getUserName(), tarEntry.getGroupName(), tarEntry.getMode()));
                 } else if (tarEntry.isFile()) {
-                    FileArchiveEntry fileEntry = new FileArchiveEntry(tarEntry.getName(), new File(tarEntry.getName()),
-                            tarEntry.getUserName(), tarEntry.getGroupName(), tarEntry.getMode());
+                    FileArchiveEntry fileEntry = new FileArchiveEntry(tarEntry.getName(), new File(tarEntry.getName()), tarEntry.getUserName(), tarEntry
+                            .getGroupName(), tarEntry.getMode());
                     fileEntry.setSize(tarEntry.getSize());
                     this.dataFiles.add(fileEntry);
                 }
@@ -156,8 +146,7 @@ public class DebInfo {
 
     private final ArArchiveInputStream getArArchiveInputStream(File pkgFile) {
         try {
-            return (ArArchiveInputStream) new ArchiveStreamFactory().createArchiveInputStream(ArchiveStreamFactory.AR,
-                    getInputStream(pkgFile));
+            return (ArArchiveInputStream) new ArchiveStreamFactory().createArchiveInputStream(ArchiveStreamFactory.AR, getInputStream(pkgFile));
         } catch (ArchiveException e) {
             throw new DebianArchiveException("Unable to open AR Archive", e);
         }
@@ -203,28 +192,20 @@ public class DebInfo {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append(LINEFEED).append(DebianControlField.PACKAGE.getFieldname()).append(": ")
-        .append(this.control.getPackageName()).append(LINEFEED);
+        sb.append(LINEFEED).append(DebianControlField.PACKAGE.getFieldname()).append(": ").append(this.control.getPackageName()).append(LINEFEED);
         if (StringUtils.isNotBlank(this.control.getSection())) {
-            sb.append(DebianControlField.SECTION.getFieldname()).append(": ").append(this.control.getSection())
-            .append(LINEFEED);
+            sb.append(DebianControlField.SECTION.getFieldname()).append(": ").append(this.control.getSection()).append(LINEFEED);
         }
         if (StringUtils.isNotBlank(this.control.getPriority())) {
-            sb.append(DebianControlField.PRIORITY.getFieldname()).append(": ").append(this.control.getPriority())
-            .append(LINEFEED);
+            sb.append(DebianControlField.PRIORITY.getFieldname()).append(": ").append(this.control.getPriority()).append(LINEFEED);
         }
-        sb.append(DebianControlField.MAINTAINER.getFieldname()).append(": ").append(this.control.getMaintainer())
-        .append(LINEFEED);
-        if (this.control.getInstalledSize() > DebianControl.INVALID_SIZE) {
-            sb.append(DebianControlField.INSTALLED_SIZE.getFieldname()).append(": ")
-            .append(this.control.getInstalledSize()).append(LINEFEED);
+        sb.append(DebianControlField.MAINTAINER.getFieldname()).append(": ").append(this.control.getMaintainer()).append(LINEFEED);
+        if (this.control.getInstalledSize() > INVALID_SIZE) {
+            sb.append(DebianControlField.INSTALLED_SIZE.getFieldname()).append(": ").append(this.control.getInstalledSize()).append(LINEFEED);
         }
-        sb.append(DebianControlField.VERSION.getFieldname()).append(": ").append(this.control.getVersion())
-        .append(LINEFEED);
-        sb.append(DebianControlField.ARCHITECTURE.getFieldname()).append(": ").append(this.control.getArchitecture())
-        .append(LINEFEED);
-        sb.append(DebianControlField.DESCRIPTION.getFieldname()).append(": ")
-        .append(this.control.getDescriptionSynopsis()).append(LINEFEED);
+        sb.append(DebianControlField.VERSION.getFieldname()).append(": ").append(this.control.getVersion()).append(LINEFEED);
+        sb.append(DebianControlField.ARCHITECTURE.getFieldname()).append(": ").append(this.control.getArchitecture()).append(LINEFEED);
+        sb.append(DebianControlField.DESCRIPTION.getFieldname()).append(": ").append(this.control.getDescriptionSynopsis()).append(LINEFEED);
         if (this.control.getDescription() != null) {
             sb.append(this.control.getDescription()).append(LINEFEED);
         }
@@ -246,8 +227,7 @@ public class DebInfo {
     }
 
     public enum DebianInfoFile {
-        CONTROL("control"), CONFFILES("conffiles"), PRE_INSTALL("preinst"), POST_INSTALL("postinst"), PRE_REMOVE(
-                "premr"), POST_REMOVE("postrm");
+        CONTROL("control"), CONFFILES("conffiles"), PRE_INSTALL("preinst"), POST_INSTALL("postinst"), PRE_REMOVE("premr"), POST_REMOVE("postrm");
         private final String filename;
 
         DebianInfoFile(String n) {
