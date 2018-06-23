@@ -9,11 +9,15 @@ import org.apache.maven.artifact.versioning.VersionRange;
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 
 import static be.hobbiton.maven.lipamp.common.Constants.INVALID_SIZE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public final class TestConstants {
     public static final Path BASEPATH = Paths.get("src/test/data");
@@ -58,6 +62,7 @@ public final class TestConstants {
     public static final String[] DEP_GROUPID_PARTS = {"be", "hobbiton", "cloud"};
     public static final String DEP_GROUPID = String.join(".", DEP_GROUPID_PARTS);
     public static final String DEP_PACKAGING = "jar";
+    public static final String DEP_CLASSIFIER = "source";
     public static final String DEP_VERSION_STR = "1.0.0";
     public static final String DEP_FILENAME = DEP_ARTIFACTID.concat("-").concat(DEP_VERSION_STR).concat(".").concat(DEP_PACKAGING);
     public static final VersionRange DEP_VERSION = VersionRange.createFromVersion(DEP_VERSION_STR);
@@ -153,6 +158,34 @@ public final class TestConstants {
                 return false;
         }
         return false;
+    }
+
+    public static void assertConffiles(DebInfo debianInfo, String[] filenames) {
+        Set<String> notFound = new HashSet<>(Arrays.asList(filenames));
+        Collection<File> conffiles = debianInfo.getConffiles();
+        if (conffiles != null) {
+            for (File configFile : conffiles) {
+                String conffilePath = configFile.getAbsolutePath();
+                if (notFound.contains(conffilePath)) {
+                    notFound.remove(conffilePath);
+                } else {
+                    fail("found unexpected file: " + conffilePath);
+                }
+            }
+        }
+        assertEquals("Missing: " + notFound, 0, notFound.size());
+    }
+
+    public static void assertControl(DebInfo debianInfo, String[] filenames) {
+        Set<String> notFound = new HashSet<String>(Arrays.asList(filenames));
+        for (File controlFile : debianInfo.getControlFiles()) {
+            if (notFound.contains(controlFile.getName())) {
+                notFound.remove(controlFile.getName());
+            } else {
+                fail("found unexpected file: " + controlFile.getName());
+            }
+        }
+        assertEquals("Missing: " + notFound, 0, notFound.size());
     }
 
 

@@ -6,6 +6,7 @@ import org.codehaus.plexus.util.StringUtils;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import static be.hobbiton.maven.lipamp.common.Constants.INVALID_SIZE;
@@ -43,8 +44,7 @@ public class DebianControl {
         if (!isValid()) {
             throw new DebianArchiveException("Control file is invalid");
         }
-        BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(output, StandardCharsets.UTF_8));
-        try {
+        try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(output, StandardCharsets.UTF_8))) {
             writeTextField(writer, DebianControlField.PACKAGE, this.packageName);
             writeTextField(writer, DebianControlField.VERSION, this.version);
             writeTextField(writer, DebianControlField.ARCHITECTURE, this.architecture);
@@ -60,12 +60,6 @@ public class DebianControl {
             writeNotEmptyTextField(writer, DebianControlField.HOMEPAGE, this.homepage);
         } catch (IOException e) {
             throw new DebianArchiveException("Could not write control file", e);
-        } finally {
-            try {
-                writer.close();
-            } catch (IOException e) {
-                this.logger.debug(e);
-            }
         }
     }
 
@@ -84,9 +78,9 @@ public class DebianControl {
                 .isNotBlank(this.maintainer) && StringUtils.isNotBlank(this.description) && StringUtils.isNotBlank(this.descriptionSynopsis);
     }
 
-    private final void parseControlFile(InputStream input) {
+    private void parseControlFile(InputStream input) {
         BufferedReader reader = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8));
-        String line = null;
+        String line;
         String fieldName = null;
         List<String> values = null;
         try {
@@ -111,7 +105,7 @@ public class DebianControl {
 
     private void addFieldValue(String[] parts, String fieldName, List<String> values) {
         if (parts.length != 2 || parts[0].length() < 1) {
-            throw new DebianArchiveException("Unable to read Control File, unexpected line: " + parts);
+            throw new DebianArchiveException("Unable to read Control File, unexpected line: " + Arrays.toString(parts));
         }
         if (fieldName != null) {
             saveControlField(fieldName, values);
@@ -137,8 +131,8 @@ public class DebianControl {
         return sb.toString();
     }
 
-    private final void saveControlField(String fieldName, List<String> values) {
-        DebianControlField field = null;
+    private void saveControlField(String fieldName, List<String> values) {
+        DebianControlField field;
         try {
             field = DebianControlField.fromFieldname(fieldName);
         } catch (IllegalArgumentException e) {
@@ -201,7 +195,7 @@ public class DebianControl {
         }
     }
 
-    public long getLongValue(String strValue) {
+    private long getLongValue(String strValue) {
         try {
             return Long.parseLong(strValue);
         } catch (NumberFormatException e) {

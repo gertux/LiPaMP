@@ -1,5 +1,6 @@
 package be.hobbiton.maven.lipamp.common;
 
+import static be.hobbiton.maven.lipamp.common.Constants.INVALID_MODE;
 import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
@@ -18,4 +19,12 @@ public class ArchiveEntryTest {
         assertEquals("-rwxrw-r-x", ArchiveEntry.getModeString(ArchiveEntryType.L, 0765));
     }
 
+    @Test
+    public void testFromModeString() {
+        assertEquals(0751, ArchiveEntry.fromModeString("0751"));
+        assertEquals(0751, ArchiveEntry.fromModeString("751"));
+        assertEquals(INVALID_MODE, ArchiveEntry.fromModeString(null));
+        assertEquals(INVALID_MODE, ArchiveEntry.fromModeString("aa"));
+        assertEquals(INVALID_MODE, ArchiveEntry.fromModeString("1a"));
+    }
 }

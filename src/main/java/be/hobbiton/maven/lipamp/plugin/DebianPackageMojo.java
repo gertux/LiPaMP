@@ -163,12 +163,14 @@ public class DebianPackageMojo extends AbstractMojo {
      *     &lt;groupId>be.hobbiton.app</groupId>
      *     &lt;artifactId>hiapp</artifactId>
      *     &lt;type>war</type>
+     *     &lt;classifier>jdk8</classifier>
      *     &lt;destination>/opt/hiapp/</destination>
      *   &lt;/artifact>
      * &lt;/artifacts>
      * </pre>
      * <p>
      * type is optional, default value = jar
+     * classifier is optional, default no classifier
      *
      * @since 1.0.0
      */
@@ -398,23 +400,21 @@ public class DebianPackageMojo extends AbstractMojo {
 
     private List<ArchiveEntry> getLinkEntries() {
         if (this.links != null) {
-            return Arrays.stream(this.links).flatMap(this::toArchiveEntries).collect(Collectors.toList());
+            return Arrays.stream(this.links).filter(LinkEntry::isValid).flatMap(this::toArchiveEntries).collect(Collectors.toList());
         }
         return Collections.emptyList();
     }
 
     private Stream<ArchiveEntry> toArchiveEntries(LinkEntry linkEntry) {
         List<ArchiveEntry> archiveEntries = new ArrayList<>();
-        if (linkEntry.isValid()) {
-            Path destPath = Paths.get(linkEntry.getPath());
-            if (destPath.startsWith(ROOT_PATH)) {
-                destPath = ROOT_PATH.relativize(destPath);
-            }
-            archiveEntries.addAll(getParentEntries(destPath.getParent()));
-            archiveEntries.add(new SymbolicLinkArchiveEntry(String.valueOf(CURRENT_PATH.resolve(destPath)), linkEntry.getTarget(), stringValueOrDefault
-                    (linkEntry.getUsername(), this.defaultUsername), stringValueOrDefault(linkEntry.getGroupname(), this.defaultGroupname),
-                    modeValueOrDefault(linkEntry.getModeValue(), this.defaultDirectoryModeValue)));
+        Path destPath = Paths.get(linkEntry.getPath());
+        if (destPath.startsWith(ROOT_PATH)) {
+            destPath = ROOT_PATH.relativize(destPath);
         }
+        archiveEntries.addAll(getParentEntries(destPath.getParent()));
+        archiveEntries.add(new SymbolicLinkArchiveEntry(String.valueOf(CURRENT_PATH.resolve(destPath)), linkEntry.getTarget(), stringValueOrDefault(linkEntry
+                .getUsername(), this.defaultUsername), stringValueOrDefault(linkEntry.getGroupname(), this.defaultGroupname), modeValueOrDefault(linkEntry
+                .getModeValue(), this.defaultDirectoryModeValue)));
         return archiveEntries.stream();
     }
 

@@ -12,17 +12,22 @@ public class ArtifactPackageEntry extends Attributable {
     private String groupId;
     private String type = DEFAULT_TYPE;
     private String destination;
+    private String classifier;
 
     public ArtifactPackageEntry() {
         super();
     }
 
-    public ArtifactPackageEntry(String artifactId, String groupId, String type, String destination, String username, String groupname, String mode) {
+    public ArtifactPackageEntry(String artifactId, String groupId, String type, String classifier, String destination) {
         super();
         this.artifactId = artifactId;
         this.groupId = groupId;
         setType(type);
+        this.classifier = classifier;
         this.destination = destination;
+    }
+
+    public void setAttributes(String username, String groupname, String mode) {
         setUsername(username);
         setGroupname(groupname);
         setMode(mode);
@@ -42,6 +47,14 @@ public class ArtifactPackageEntry extends Attributable {
 
     public void setGroupId(String groupId) {
         this.groupId = groupId;
+    }
+
+    public String getClassifier() {
+        return classifier;
+    }
+
+    public void setClassifier(String classifier) {
+        this.classifier = classifier;
     }
 
     public String getType() {
@@ -76,8 +89,12 @@ public class ArtifactPackageEntry extends Attributable {
             result = this.artifactId.compareTo(a.getArtifactId());
             if (result == 0) {
                 result = this.type.compareTo(a.getType());
-                if (a.getClassifier() != null) {
-                    result = -1;
+                if (result == 0) {
+                    if (this.classifier != null) {
+                        result = this.classifier.compareTo(a.getClassifier());
+                    } else if (a.getClassifier() != null) {
+                        result = -1;
+                    }
                 }
             }
         }
