@@ -12,13 +12,13 @@ import org.apache.commons.compress.archivers.ar.ArArchiveInputStream;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.compressors.CompressorException;
-import org.apache.commons.compress.compressors.CompressorInputStream;
 import org.apache.commons.compress.compressors.CompressorStreamFactory;
 import org.apache.maven.plugin.logging.Log;
 import org.codehaus.plexus.util.StringUtils;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -43,9 +43,12 @@ public class DebInfo {
     private Log logger;
 
     public DebInfo(File packageFile, Log logger) {
-        super();
         this.logger = logger;
-        readFile(packageFile);
+        init(packageFile);
+    }
+
+    public DebInfo(Path packageFilePath, Log logger) {
+        this(packageFilePath.toFile(), logger);
     }
 
     public DebianControl getControl() {
@@ -64,13 +67,60 @@ public class DebInfo {
         return this.conffiles;
     }
 
-    private final void readControl(InputStream input) {
-        BufferedInputStream bufInput = null;
+    private final void init(File packageFile) {
+        try (ArArchiveInputStream archiveStream = (ArArchiveInputStream) new ArchiveStreamFactory().createArchiveInputStream(ArchiveStreamFactory.AR, new
+                FileInputStream(packageFile))) {
+            ArArchiveEntry firstEntry = archiveStream.getNextArEntry();
+            if (firstEntry == null || !"debian-binary".equals(firstEntry.getName())) {
+                throw new DebianArchiveException("Unexpected entry, debian-binary missing");
+            }
+            ArArchiveEntry secondEntry = archiveStream.getNextArEntry();
+            if (secondEntry == null || !secondEntry.getName().startsWith("control.tar")) {
+                throw new DebianArchiveException("Unexpected entry, control archive missing");
+            } else {
+                readControlEntries(new CompressorStreamFactory().createCompressorInputStream(new BufferedInputStream(archiveStream)));
+            }
+            ArArchiveEntry thirdEntry = archiveStream.getNextArEntry();
+            if (thirdEntry == null || !thirdEntry.getName().startsWith("data.tar")) {
+                throw new DebianArchiveException("Unexpected entry, data archive missing");
+            } else {
+                readDataEntries(new CompressorStreamFactory().createCompressorInputStream(new BufferedInputStream(archiveStream)));
+            }
+        } catch (IOException | CompressorException | ArchiveException e) {
+            throw new DebianArchiveException("Cannot read package file", e);
+        }
+    }
+
+    private final void readDataEntries(InputStream input) {
         TarArchiveInputStream tar = null;
         try {
-            bufInput = new BufferedInputStream(input);
-            CompressorInputStream compInput = new CompressorStreamFactory().createCompressorInputStream(bufInput);
-            tar = new TarArchiveInputStream(compInput);
+            tar = new TarArchiveInputStream(input);
+            TarArchiveEntry tarEntry = tar.getNextTarEntry();
+            this.dataFiles = new ArrayList<>();
+            while (tarEntry != null) {
+                if (tarEntry.isSymbolicLink()) {
+                    this.dataFiles.add(new SymbolicLinkArchiveEntry(tarEntry.getName(), tarEntry.getLinkName(), tarEntry.getUserName(), tarEntry.getGroupName
+                            (), tarEntry.getMode()));
+                } else if (tarEntry.isDirectory()) {
+                    this.dataFiles.add(new DirectoryArchiveEntry(tarEntry.getName(), tarEntry.getUserName(), tarEntry.getGroupName(), tarEntry.getMode()));
+                } else if (tarEntry.isFile()) {
+                    FileArchiveEntry fileEntry = new FileArchiveEntry(tarEntry.getName(), new File(tarEntry.getName()), tarEntry.getUserName(), tarEntry
+                            .getGroupName(), tarEntry.getMode());
+                    fileEntry.setSize(tarEntry.getSize());
+                    this.dataFiles.add(fileEntry);
+                }
+                tarEntry = tar.getNextTarEntry();
+            }
+        } catch (IOException e) {
+            throw new DebianArchiveException("Unable to read Data Archive entry", e);
+        }
+    }
+
+
+    private final void readControlEntries(InputStream input) {
+        TarArchiveInputStream tar = null;
+        try {
+            tar = new TarArchiveInputStream(input);
             TarArchiveEntry tarEntry = tar.getNextTarEntry();
             this.controlFiles = new ArrayList<>();
             while (tarEntry != null) {
@@ -82,8 +132,6 @@ public class DebInfo {
                 }
                 tarEntry = tar.getNextTarEntry();
             }
-        } catch (CompressorException e) {
-            throw new DebianArchiveException("Unable to read Control Archive", e);
         } catch (IOException e) {
             throw new DebianArchiveException("Unable to read Control Archive entry", e);
         }
@@ -102,90 +150,6 @@ public class DebInfo {
             }
         } catch (IOException e) {
             throw new DebianArchiveException("Unable to read conffiles File", e);
-        }
-    }
-
-    @SuppressWarnings("resource")
-    private final void readData(InputStream input) {
-        BufferedInputStream bufInput = null;
-        TarArchiveInputStream tar = null;
-        try {
-            bufInput = new BufferedInputStream(input);
-            CompressorInputStream compInput = new CompressorStreamFactory().createCompressorInputStream(bufInput);
-            tar = new TarArchiveInputStream(compInput);
-            TarArchiveEntry tarEntry = tar.getNextTarEntry();
-            this.dataFiles = new ArrayList<>();
-            while (tarEntry != null) {
-                if (tarEntry.isSymbolicLink()) {
-                    this.dataFiles.add(new SymbolicLinkArchiveEntry(tarEntry.getName(), tarEntry.getLinkName(), tarEntry.getUserName(), tarEntry.getGroupName
-                            (), tarEntry.getMode()));
-                } else if (tarEntry.isDirectory()) {
-                    this.dataFiles.add(new DirectoryArchiveEntry(tarEntry.getName(), tarEntry.getUserName(), tarEntry.getGroupName(), tarEntry.getMode()));
-                } else if (tarEntry.isFile()) {
-                    FileArchiveEntry fileEntry = new FileArchiveEntry(tarEntry.getName(), new File(tarEntry.getName()), tarEntry.getUserName(), tarEntry
-                            .getGroupName(), tarEntry.getMode());
-                    fileEntry.setSize(tarEntry.getSize());
-                    this.dataFiles.add(fileEntry);
-                }
-                tarEntry = tar.getNextTarEntry();
-            }
-        } catch (CompressorException e) {
-            throw new DebianArchiveException("Unable to read Data Archive", e);
-        } catch (IOException e) {
-            throw new DebianArchiveException("Unable to read Data Archive entry", e);
-        }
-    }
-
-    private final InputStream getInputStream(File pkgFile) {
-        try {
-            return new FileInputStream(pkgFile);
-        } catch (FileNotFoundException e) {
-            throw new DebianArchiveException("Cannot read package file", e);
-        }
-    }
-
-    private final ArArchiveInputStream getArArchiveInputStream(File pkgFile) {
-        try {
-            return (ArArchiveInputStream) new ArchiveStreamFactory().createArchiveInputStream(ArchiveStreamFactory.AR, getInputStream(pkgFile));
-        } catch (ArchiveException e) {
-            throw new DebianArchiveException("Unable to open AR Archive", e);
-        }
-
-    }
-
-    private final void readFile(File pkgFile) {
-        ArArchiveInputStream archiveStream = getArArchiveInputStream(pkgFile);
-        try {
-            readDebianBinary(archiveStream);
-            readControlArchive(archiveStream);
-            readDataArchive(archiveStream);
-        } catch (IOException e) {
-            throw new DebianArchiveException("Unable to read AR Archive entry", e);
-        }
-    }
-
-    private void readDataArchive(ArArchiveInputStream archiveStream) throws IOException {
-        ArArchiveEntry thirdEntry = archiveStream.getNextArEntry();
-        if (thirdEntry == null || !thirdEntry.getName().startsWith("data.tar")) {
-            throw new DebianArchiveException("Unexpected entry, data archive missing");
-        } else {
-            readData(archiveStream);
-        }
-    }
-
-    private void readControlArchive(ArArchiveInputStream archiveStream) throws IOException {
-        ArArchiveEntry secondEntry = archiveStream.getNextArEntry();
-        if (secondEntry == null || !secondEntry.getName().startsWith("control.tar")) {
-            throw new DebianArchiveException("Unexpected entry, control archive missing");
-        } else {
-            readControl(archiveStream);
-        }
-    }
-
-    private void readDebianBinary(ArArchiveInputStream archiveStream) throws IOException {
-        ArArchiveEntry firstEntry = archiveStream.getNextArEntry();
-        if (firstEntry == null || !"debian-binary".equals(firstEntry.getName())) {
-            throw new DebianArchiveException("Unexpected entry, debian-binary missing");
         }
     }
 
