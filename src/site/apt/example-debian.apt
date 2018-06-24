@@ -3,15 +3,15 @@
  ------
  Gert Dewit
  ------
- 2015-10-23
+ 2018-06-24
  ------
  
 Debian example
 
   The example describes a module that packages a Spring Boot web application that is started at 
-  boot time using {{{https://wiki.debian.org/Upstart}Upstart}} and has a config directory in /etc.
+  boot time using {{{https://www.freedesktop.org/wiki/Software/systemd/}systemd}} and has a config directory in /etc.
   
-  The app needs to run as a non privileged user which is created using a postinstall script.
+  The app needs to run as a non privileged user which is created using a preinstall script.
   
   The non priviledged user should be granted the privilege to write to the application log folder.
   
@@ -22,19 +22,18 @@ Debian example
   +--- src/main/resources/deb/
       +--- DEBIAN/
       |   +--- preinst
-      +--- etc/
-          +--- hiapp/
-          |   +--- hiapp.properties 
-          +--- init/
-              +--- hiapp.conf
+      +--- etc/hiapp/
+      |   +--- hiapp.properties
+      +--- lib/systemd/system
+          +--- hiapp.service
 +---
 
-  The <<<src/main/resoources/deb>>> folder is the starting point for the file system resources. The DEBIAN
+  The <<<src/main/resources/deb>>> folder is the starting point for the file system resources. The DEBIAN
   subfolder contains the Debian control files, in this example only <<preinst>> is used, other 
   possible files are <<postinst>>, <<prerm>>, <<postrm>>, ...
   
-  The other folders and files are considered to be data files, in this example the upstart script
-  hiapp.conf and it's parent folders become data archive members using the default username and
+  The other folders and files are considered to be data files, in this example the systemd script
+  hiapp.service and it's parent folders become data archive members using the default username and
   groupname. The permissions for these files and folders are the default file and folder mode 
   respectively.
   
@@ -174,8 +173,10 @@ Data files:
 drwxr-xr-x     root/root         0 ./etc/
 drwxr-xr-x     root/root         0 ./etc/hiapp/
 -rw-r-----     root/hiapp       52 ./etc/hiapp/hiapp.properties
-drwxr-xr-x     root/root         0 ./etc/init/
--rw-r--r--     root/root       421 ./etc/init/hiapp.conf
+drwxr-xr-x     root/root         0 ./lib
+drwxr-xr-x     root/root         0 ./lib/systemd
+drwxr-xr-x     root/root         0 ./lib/systemd/system
+-rw-r--r--     root/root       421 ./lib/systemd/system/hiapp.service
 drwxr-xr-x     root/root         0 ./opt/
 drwxr-xr-x     root/root         0 ./opt/hiapp/
 -rw-r--r--     root/root    378787 ./opt/hiapp/hiapp.jar
@@ -199,7 +200,7 @@ drwxr-xr-x    hiapp/root         0 ./var/log/hiapp/
 set -e
 
 USER='hiapp'
-HOMEBASEDIR='/opt'
+HOMEDIR='/opt/hiapp'
 
 case "$1" in
   install)
@@ -207,34 +208,28 @@ case "$1" in
   # Add user if it doesn't already exists
   if ! getent passwd ${USER} >/dev/null 2>&1
   then
-	useradd -r -U -m -b /opt -s /bin/bash ${USER}
+    useradd --system --user-group --home-dir ${HOMEDIR} --shell /sbin/nologin ${USER}
   fi
 esac
 
 exit 0
 +---
   
-* Upstart file
+* systemd service file
 
-  The upstart file example:
+  The systemd service file example:
 
 +---
-description     "Say Hi server"
+[Unit]
+Description=Say Hi server
 
-start on runlevel [2345]
-stop on runlevel [!2345]
+[Service]
+ExecStart=java -jar /opt/hiapp/hiapp.jar
+User=hiapp
+TimeoutSec=120
+KillMode=process
+Restart=on-failure
 
-respawn
-respawn limit 10 5
-umask 022
-
-console none
-
-pre-start script
-    test -f /opt/hiapp/hiapp.jar || { stop; exit 0; }
-end script
-
-script
-    su hiapp -c "java -jar /opt/hiapp/hiapp.jar"
-end script
+[Install]
+WantedBy=multi-user.target
 +---
