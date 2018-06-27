@@ -1,5 +1,6 @@
 package be.hobbiton.maven.lipamp.plugin;
 
+import be.hobbiton.maven.lipamp.common.LinuxPackagingException;
 import org.codehaus.plexus.util.StringUtils;
 
 /**
@@ -37,7 +38,10 @@ public class LinkEntry extends Attributable{
     }
 
     public boolean isValid() {
-        return (StringUtils.isNotBlank(this.path) && StringUtils.isNotBlank(this.target));
+        if (StringUtils.isNotBlank(this.path) && StringUtils.isNotBlank(this.target)) {
+            return true;
+        }
+        throw new LinuxPackagingException(String.format("Invalid LinkEntry %s -> %s", this.path, this.target));
     }
 
     @Override

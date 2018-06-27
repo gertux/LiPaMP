@@ -1,8 +1,11 @@
 package be.hobbiton.maven.lipamp.plugin;
 
-import static org.junit.Assert.*;
-
+import be.hobbiton.maven.lipamp.common.LinuxPackagingException;
 import org.junit.Test;
+
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class FolderEntryTest {
     private static final String USERNAME = "username";
@@ -24,20 +27,34 @@ public class FolderEntryTest {
 
     @Test
     public void testIsInvalid() {
-        assertFalse(new FolderEntry(null, null, null, null).isValid());
-        assertFalse(new FolderEntry(null, USERNAME, null, null).isValid());
-        assertFalse(new FolderEntry(null, null, GROUPNAME, null).isValid());
-        assertFalse(new FolderEntry(null, null, null, MODE).isValid());
-        assertFalse(new FolderEntry(null, null, GROUPNAME, MODE).isValid());
-        assertFalse(new FolderEntry(null, USERNAME, null, MODE).isValid());
-        assertFalse(new FolderEntry(null, USERNAME, GROUPNAME, null).isValid());
-        assertFalse(new FolderEntry(null, USERNAME, GROUPNAME, MODE).isValid());
+        FolderEntry[] invalidEntries = {
+        new FolderEntry(null, null, null, null),
+        new FolderEntry(null, USERNAME, null, null),
+        new FolderEntry(null, null, GROUPNAME, null),
+        new FolderEntry(null, null, null, MODE),
+        new FolderEntry(null, null, GROUPNAME, MODE),
+        new FolderEntry(null, USERNAME, null, MODE),
+        new FolderEntry(null, USERNAME, GROUPNAME, null),
+        new FolderEntry(null, USERNAME, GROUPNAME, MODE)};
+        for(FolderEntry folderEntry: invalidEntries) {
+            try{
+                folderEntry.isValid();
+                fail("Expected failure for ".concat(folderEntry.toString()));
+            } catch (LinuxPackagingException e) {
+                // Expected
+            }
+        }
+    }
+
+    @Test(expected = LinuxPackagingException.class)
+    public void testMiscInValid() {
+        FolderEntry entry = new FolderEntry();
+        entry.isValid();
     }
 
     @Test
     public void testMiscValid() {
         FolderEntry entry = new FolderEntry();
-        assertFalse(entry.isValid());
         entry.setPath(PATH);
         assertTrue(entry.isValid());
         assertTrue(entry.toString().contains(PATH));

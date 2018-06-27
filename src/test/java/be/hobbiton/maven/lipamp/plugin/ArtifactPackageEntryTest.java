@@ -1,5 +1,6 @@
 package be.hobbiton.maven.lipamp.plugin;
 
+import be.hobbiton.maven.lipamp.common.LinuxPackagingException;
 import org.apache.maven.artifact.DefaultArtifact;
 import org.apache.maven.artifact.handler.DefaultArtifactHandler;
 import org.junit.Test;
@@ -27,40 +28,40 @@ public class ArtifactPackageEntryTest {
         assertTrue(artifactPackageEntry.isValid());
     }
 
-    @Test
+    @Test(expected = LinuxPackagingException.class)
     public void testIsValidEmptyGroupId() {
         ArtifactPackageEntry artifactPackageEntry = new ArtifactPackageEntry(DEP_ARTIFACTID, "", DEP_PACKAGING, null, DEP_DESTINATION_DIR);
-        assertFalse(artifactPackageEntry.isValid());
+        artifactPackageEntry.isValid();
     }
 
-    @Test
+    @Test(expected = LinuxPackagingException.class)
     public void testIsValidNullGroupId() {
         ArtifactPackageEntry artifactPackageEntry = new ArtifactPackageEntry(DEP_ARTIFACTID, null, DEP_PACKAGING, null, DEP_DESTINATION_DIR);
-        assertFalse(artifactPackageEntry.isValid());
+        artifactPackageEntry.isValid();
     }
 
-    @Test
+    @Test(expected = LinuxPackagingException.class)
     public void testIsValidEmptyArtifactId() {
         ArtifactPackageEntry artifactPackageEntry = new ArtifactPackageEntry("", DEP_GROUPID, DEP_PACKAGING, null, DEP_DESTINATION_DIR);
-        assertFalse(artifactPackageEntry.isValid());
+        artifactPackageEntry.isValid();
     }
 
-    @Test
+    @Test(expected = LinuxPackagingException.class)
     public void testIsValidNullArtifactId() {
         ArtifactPackageEntry artifactPackageEntry = new ArtifactPackageEntry(null, DEP_GROUPID, DEP_PACKAGING, null, DEP_DESTINATION_DIR);
-        assertFalse(artifactPackageEntry.isValid());
+        artifactPackageEntry.isValid();
     }
 
-    @Test
+    @Test(expected = LinuxPackagingException.class)
     public void testIsValidEmptyDestination() {
         ArtifactPackageEntry artifactPackageEntry = new ArtifactPackageEntry(DEP_ARTIFACTID, DEP_GROUPID, DEP_PACKAGING, null, "");
-        assertFalse(artifactPackageEntry.isValid());
+        artifactPackageEntry.isValid();
     }
 
-    @Test
+    @Test(expected = LinuxPackagingException.class)
     public void testIsValidNullDestination() {
         ArtifactPackageEntry artifactPackageEntry = new ArtifactPackageEntry(DEP_ARTIFACTID, DEP_GROUPID, DEP_PACKAGING, null, null);
-        assertFalse(artifactPackageEntry.isValid());
+        artifactPackageEntry.isValid();
     }
 
     @Test

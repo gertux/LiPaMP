@@ -4,6 +4,7 @@ import static org.junit.Assert.*;
 
 import java.io.File;
 
+import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugin.logging.Log;
 import org.junit.Before;
@@ -26,13 +27,13 @@ public class PackageInfoMojoTest {
         this.mojo.setLog(PLUGIN_LOGGER);
     }
 
-    @Test(expected = MojoFailureException.class)
+    @Test(expected = MojoExecutionException.class)
     public void testExecuteFileNotFound() throws Exception {
         this.mojo.setFile(this.nonexistingFile);
         this.mojo.execute();
     }
 
-    @Test(expected = MojoFailureException.class)
+    @Test(expected = MojoExecutionException.class)
     public void testExecuteUnknownFiletype() throws Exception {
         this.mojo.setFile(this.unknownFileType);
         this.mojo.execute();

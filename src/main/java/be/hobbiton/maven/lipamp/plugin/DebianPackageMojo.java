@@ -115,7 +115,7 @@ public class DebianPackageMojo extends AbstractMojo {
     private String priority;
 
     /**
-     * The application's dependencies
+     * The application's Debian package level dependencies
      *
      * @since 1.1.0
      */
@@ -326,24 +326,28 @@ public class DebianPackageMojo extends AbstractMojo {
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
-        this.configure();
-        TreeSet<ArchiveEntry> dataArchiveEntries = new TreeSet<>(Comparator.comparing(ArchiveEntry::getName));
-        dataArchiveEntries.addAll(getLinkEntries());
-        dataArchiveEntries.addAll(getFolderEntries());
-        Set<Artifact> configuredArtifacts = getArtifacts();
-        dataArchiveEntries.addAll(getArtifactEntries());
-        dataArchiveEntries.addAll(getDependencies(configuredArtifacts));
-        dataArchiveEntries.addAll(collectDataArchiveEntries(this.packageBasePath));
-        if (dataArchiveEntries.size() <= 1) {
-            throw new MojoFailureException("Useless build, nothing to package");
+        try {
+            this.configure();
+            TreeSet<ArchiveEntry> dataArchiveEntries = new TreeSet<>(Comparator.comparing(ArchiveEntry::getName));
+            dataArchiveEntries.addAll(getLinkEntries());
+            dataArchiveEntries.addAll(getFolderEntries());
+            Set<Artifact> configuredArtifacts = getArtifacts();
+            dataArchiveEntries.addAll(getArtifactEntries());
+            dataArchiveEntries.addAll(getDependencies(configuredArtifacts));
+            dataArchiveEntries.addAll(collectDataArchiveEntries(this.packageBasePath));
+            if (dataArchiveEntries.size() <= 1) {
+                throw new MojoFailureException("Useless build, nothing to package");
+            }
+            generateConffilesFile(this.debianControlFilesBasePath.resolve(CONFFILES.getFilename()), dataArchiveEntries);
+            generateControlFile(getIstalledSize(dataArchiveEntries), this.debianControlFilesBasePath);
+            List<Path> controlPaths = collectControlPaths(this.debianControlFilesBasePath);
+            File packageFile = getPackageFile();
+            DebianPackage debianPackage = new DebianPackage(getLog(), controlPaths, dataArchiveEntries);
+            debianPackage.write(packageFile);
+            this.project.getArtifact().setFile(packageFile);
+        } catch (LinuxPackagingException e) {
+            throw new MojoExecutionException("Debian package failed", e);
         }
-        generateConffilesFile(this.debianControlFilesBasePath.resolve(CONFFILES.getFilename()), dataArchiveEntries);
-        generateControlFile(getIstalledSize(dataArchiveEntries), this.debianControlFilesBasePath);
-        List<Path> controlPaths = collectControlPaths(this.debianControlFilesBasePath);
-        File packageFile = getPackageFile();
-        DebianPackage debianPackage = new DebianPackage(getLog(), controlPaths, dataArchiveEntries);
-        debianPackage.write(packageFile);
-        this.project.getArtifact().setFile(packageFile);
     }
 
     private void generateConffilesFile(Path conffilesPath, TreeSet<ArchiveEntry> dataArchiveEntries) throws MojoExecutionException {
@@ -383,7 +387,7 @@ public class DebianPackageMojo extends AbstractMojo {
         this.defaultDirectoryModeValue = modeValueOrDefault(ArchiveEntry.fromModeString(this.defaultDirectoryMode), DEFAULT_DIRMODE_VALUE);
         this.defaultFileModeValue = modeValueOrDefault(ArchiveEntry.fromModeString(this.defaultFileMode), DEFAULT_FILEMODE_VALUE);
         this.packageBasePath = this.resourcesDirectory.toPath().resolve(DEBIAN_RESOURCES_DIR_NAME);
-        this.debianControlFilesBasePath = packageBasePath.resolve(DEBIAN_CONTROL_FILES_DIR_PATH);
+        this.debianControlFilesBasePath = this.packageBasePath.resolve(DEBIAN_CONTROL_FILES_DIR_PATH);
         configureAttributeSelectors();
         configureDependencies();
         createFolderIfMissing(this.debianControlFilesBasePath);
@@ -406,12 +410,11 @@ public class DebianPackageMojo extends AbstractMojo {
     }
 
     private Stream<ArchiveEntry> toArchiveEntries(LinkEntry linkEntry) {
-        List<ArchiveEntry> archiveEntries = new ArrayList<>();
         Path destPath = Paths.get(linkEntry.getPath());
         if (destPath.startsWith(ROOT_PATH)) {
             destPath = ROOT_PATH.relativize(destPath);
         }
-        archiveEntries.addAll(getParentEntries(destPath.getParent()));
+        List<ArchiveEntry> archiveEntries = new ArrayList<>(getParentEntries(destPath.getParent()));
         archiveEntries.add(new SymbolicLinkArchiveEntry(String.valueOf(CURRENT_PATH.resolve(destPath)), linkEntry.getTarget(), stringValueOrDefault(linkEntry
                 .getUsername(), this.defaultUsername), stringValueOrDefault(linkEntry.getGroupname(), this.defaultGroupname), modeValueOrDefault(linkEntry
                 .getModeValue(), this.defaultDirectoryModeValue)));
@@ -420,23 +423,20 @@ public class DebianPackageMojo extends AbstractMojo {
 
     private List<ArchiveEntry> getFolderEntries() {
         if (this.folders != null) {
-            return Arrays.stream(this.folders).flatMap(this::toArchiveEntries).collect(Collectors.toList());
+            return Arrays.stream(this.folders).filter(FolderEntry::isValid).flatMap(this::toArchiveEntries).collect(Collectors.toList());
         }
         return Collections.emptyList();
     }
 
     private Stream<ArchiveEntry> toArchiveEntries(FolderEntry folderEntry) {
-        List<ArchiveEntry> archiveEntries = new ArrayList<>();
-        if (folderEntry.isValid()) {
-            Path destPath = Paths.get(folderEntry.getPath());
-            if (destPath.startsWith(ROOT_PATH)) {
-                destPath = ROOT_PATH.relativize(destPath);
-            }
-            archiveEntries.addAll(getParentEntries(destPath.getParent()));
-            archiveEntries.add(new DirectoryArchiveEntry(String.valueOf(CURRENT_PATH.resolve(destPath)), stringValueOrDefault(folderEntry.getUsername(), this
-                    .defaultUsername), stringValueOrDefault(folderEntry.getGroupname(), this.defaultGroupname), modeValueOrDefault(folderEntry.getModeValue()
-                    , this.defaultDirectoryModeValue)));
+        Path destPath = Paths.get(folderEntry.getPath());
+        if (destPath.startsWith(ROOT_PATH)) {
+            destPath = ROOT_PATH.relativize(destPath);
         }
+        List<ArchiveEntry> archiveEntries = new ArrayList<>(getParentEntries(destPath.getParent()));
+        archiveEntries.add(new DirectoryArchiveEntry(String.valueOf(CURRENT_PATH.resolve(destPath)), stringValueOrDefault(folderEntry.getUsername(), this
+                .defaultUsername), stringValueOrDefault(folderEntry.getGroupname(), this.defaultGroupname), modeValueOrDefault(folderEntry.getModeValue(),
+                this.defaultDirectoryModeValue)));
         return archiveEntries.stream();
     }
 
@@ -469,6 +469,7 @@ public class DebianPackageMojo extends AbstractMojo {
     private Set<Artifact> getArtifacts() {
         if (this.artifacts != null) {
             return Arrays.stream(this.artifacts).
+                    filter(ArtifactPackageEntry::isValid).
                     map(this::getDependentArtifact).
                     collect(Collectors.toSet());
         }
@@ -490,7 +491,6 @@ public class DebianPackageMojo extends AbstractMojo {
     }
 
     private Stream<ArchiveEntry> toArchiveEntries(ArtifactPackageEntry artifactEntry) {
-        List<ArchiveEntry> archiveEntries = new ArrayList<>();
         Artifact depArtifact = getDependentArtifact(artifactEntry);
         Path destPath;
         if (artifactEntry.getDestination().endsWith(SLASH)) {
@@ -501,7 +501,7 @@ public class DebianPackageMojo extends AbstractMojo {
         if (destPath.startsWith(ROOT_PATH)) {
             destPath = ROOT_PATH.relativize(destPath);
         }
-        archiveEntries.addAll(getParentEntries(destPath.getParent()));
+        List<ArchiveEntry> archiveEntries = new ArrayList<>(getParentEntries(destPath.getParent()));
         archiveEntries.add(new FileArchiveEntry(String.valueOf(CURRENT_PATH.resolve(destPath)), depArtifact.getFile(), stringValueOrDefault(artifactEntry
                 .getUsername(), this.defaultUsername), stringValueOrDefault(artifactEntry.getGroupname(), this.defaultGroupname), modeValueOrDefault
                 (artifactEntry.getModeValue(), this.defaultFileModeValue)));
@@ -558,7 +558,7 @@ public class DebianPackageMojo extends AbstractMojo {
 
     private ArchiveEntry toArchiveEntry(Path relpath) {
         ArchiveEntry archiveEntry;
-        Path path = packageBasePath.resolve(relpath);
+        Path path = this.packageBasePath.resolve(relpath);
         if (Files.isSymbolicLink(path)) {
             archiveEntry = toArchiveEntry(relpath, null, getLinkTarget(path), ArchiveEntry.ArchiveEntryType.S);
         } else if (path.toFile().isDirectory()) {
@@ -573,7 +573,7 @@ public class DebianPackageMojo extends AbstractMojo {
         try {
             return String.valueOf(Files.readSymbolicLink(path));
         } catch (IOException e) {
-            throw new LinuxPackagingMojoException("Cannot read link information for ".concat(String.valueOf(path)), e);
+            throw new LinuxPackagingException("Cannot read link information for ".concat(String.valueOf(path)), e);
         }
     }
 
@@ -600,7 +600,7 @@ public class DebianPackageMojo extends AbstractMojo {
                     File contentsFile = contents.toFile();
                     return new FileArchiveEntry(String.valueOf(CURRENT_PATH.resolve(relpath)), contentsFile, userName, groupName, fileMode);
                 } else {
-                    throw new LinuxPackagingMojoException("No contents for file entry ".concat(relpath.toString()));
+                    throw new LinuxPackagingException("No contents for file entry ".concat(relpath.toString()));
                 }
         }
     }
@@ -636,7 +636,7 @@ public class DebianPackageMojo extends AbstractMojo {
 
     private String getMaintainerFromModel() {
         if (this.project.getDevelopers() != null && !this.project.getDevelopers().isEmpty()) {
-            Developer dev = (Developer) this.project.getDevelopers().get(0);
+            Developer dev = this.project.getDevelopers().get(0);
             StringBuilder maintainerFromModel = new StringBuilder();
             if (StringUtils.isNotBlank(dev.getName())) {
                 maintainerFromModel.append(dev.getName().trim());
@@ -656,17 +656,13 @@ public class DebianPackageMojo extends AbstractMojo {
 
     private Artifact getDependentArtifact(ArtifactPackageEntry artifactEntry) {
         Artifact dependentArtifact = null;
-        if (artifactEntry.isValid()) {
-            if (this.project.getDependencyArtifacts() != null) {
-                dependentArtifact = findDependentArtifact(artifactEntry);
-            }
-        } else {
-            throw new LinuxPackagingMojoException("Invalid artifact specification");
+        if (this.project.getDependencyArtifacts() != null) {
+            dependentArtifact = findDependentArtifact(artifactEntry);
         }
         if (dependentArtifact != null) {
             return dependentArtifact;
         }
-        throw new LinuxPackagingMojoException(String.format("Artifact %s not found", artifactEntry.toString()));
+        throw new LinuxPackagingException(String.format("Artifact %s not found", artifactEntry.toString()));
     }
 
     private Artifact findDependentArtifact(ArtifactPackageEntry artifactEntry) {

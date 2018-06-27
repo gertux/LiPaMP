@@ -1,9 +1,6 @@
 package be.hobbiton.maven.lipamp.deb;
 
-import be.hobbiton.maven.lipamp.common.ArchiveEntry;
-import be.hobbiton.maven.lipamp.common.DirectoryArchiveEntry;
-import be.hobbiton.maven.lipamp.common.FileArchiveEntry;
-import be.hobbiton.maven.lipamp.common.SymbolicLinkArchiveEntry;
+import be.hobbiton.maven.lipamp.common.*;
 import be.hobbiton.maven.lipamp.deb.DebianControl.DebianControlField;
 import org.apache.commons.compress.archivers.ArchiveException;
 import org.apache.commons.compress.archivers.ArchiveStreamFactory;
@@ -72,22 +69,22 @@ public class DebInfo {
                 FileInputStream(packageFile))) {
             ArArchiveEntry firstEntry = archiveStream.getNextArEntry();
             if (firstEntry == null || !"debian-binary".equals(firstEntry.getName())) {
-                throw new DebianArchiveException("Unexpected entry, debian-binary missing");
+                throw new LinuxPackagingException("Unexpected entry, debian-binary missing");
             }
             ArArchiveEntry secondEntry = archiveStream.getNextArEntry();
             if (secondEntry == null || !secondEntry.getName().startsWith("control.tar")) {
-                throw new DebianArchiveException("Unexpected entry, control archive missing");
+                throw new LinuxPackagingException("Unexpected entry, control archive missing");
             } else {
                 readControlEntries(new CompressorStreamFactory().createCompressorInputStream(new BufferedInputStream(archiveStream)));
             }
             ArArchiveEntry thirdEntry = archiveStream.getNextArEntry();
             if (thirdEntry == null || !thirdEntry.getName().startsWith("data.tar")) {
-                throw new DebianArchiveException("Unexpected entry, data archive missing");
+                throw new LinuxPackagingException("Unexpected entry, data archive missing");
             } else {
                 readDataEntries(new CompressorStreamFactory().createCompressorInputStream(new BufferedInputStream(archiveStream)));
             }
         } catch (IOException | CompressorException | ArchiveException e) {
-            throw new DebianArchiveException("Cannot read package file", e);
+            throw new LinuxPackagingException("Cannot read package file", e);
         }
     }
 
@@ -112,7 +109,7 @@ public class DebInfo {
                 tarEntry = tar.getNextTarEntry();
             }
         } catch (IOException e) {
-            throw new DebianArchiveException("Unable to read Data Archive entry", e);
+            throw new LinuxPackagingException("Unable to read Data Archive entry", e);
         }
     }
 
@@ -133,7 +130,7 @@ public class DebInfo {
                 tarEntry = tar.getNextTarEntry();
             }
         } catch (IOException e) {
-            throw new DebianArchiveException("Unable to read Control Archive entry", e);
+            throw new LinuxPackagingException("Unable to read Control Archive entry", e);
         }
     }
 
@@ -149,7 +146,7 @@ public class DebInfo {
                 }
             }
         } catch (IOException e) {
-            throw new DebianArchiveException("Unable to read conffiles File", e);
+            throw new LinuxPackagingException("Unable to read conffiles File", e);
         }
     }
 

@@ -2,6 +2,7 @@ package be.hobbiton.maven.lipamp.plugin;
 
 import be.hobbiton.maven.lipamp.common.ArtifactStore;
 import be.hobbiton.maven.lipamp.common.FolderArtifactStore;
+import be.hobbiton.maven.lipamp.common.LinuxPackagingException;
 import be.hobbiton.maven.lipamp.common.MavenStyleArtifactStore;
 import org.codehaus.plexus.util.StringUtils;
 
@@ -56,7 +57,7 @@ public class Dependencies extends Attributable {
 
     public ArtifactStore getArtifactStore(String defaultUsername, String defaultGroupname, int defaultFileMode, int defaultDirMode) {
         if(StringUtils.isBlank(this.destination)) {
-            throw new LinuxPackagingMojoException("Invalid dependencies configuration, no destination specified");
+            throw new LinuxPackagingException("Invalid dependencies configuration, no destination specified");
         }
         String username = stringValueOrDefault(getUsername(), defaultUsername);
         String groupname = stringValueOrDefault(getGroupname(), defaultGroupname);

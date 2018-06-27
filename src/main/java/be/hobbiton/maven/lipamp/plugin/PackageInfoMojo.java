@@ -2,13 +2,12 @@ package be.hobbiton.maven.lipamp.plugin;
 
 import java.io.File;
 
+import be.hobbiton.maven.lipamp.common.LinuxPackagingException;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 
-import be.hobbiton.maven.lipamp.common.ArchiveException;
 import be.hobbiton.maven.lipamp.deb.DebInfo;
 
 /**
@@ -26,15 +25,15 @@ public class PackageInfoMojo extends AbstractMojo {
     private File file;
 
     @Override
-    public void execute() throws MojoExecutionException, MojoFailureException {
+    public void execute() throws MojoExecutionException {
         if (!this.file.exists()) {
-            throw new MojoFailureException(this.file.getPath() + " does not exist");
+            throw new MojoExecutionException(this.file.getPath() + " does not exist");
         }
         try {
             DebInfo info = new DebInfo(this.file, getLog());
             getLog().info(info.toString());
-        } catch (ArchiveException e) {
-            throw new MojoFailureException("Failed to process " + this.file.getPath(), e);
+        } catch (LinuxPackagingException e) {
+            throw new MojoExecutionException("Failed to process " + this.file.getPath(), e);
         }
     }
 

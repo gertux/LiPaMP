@@ -19,13 +19,12 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static be.hobbiton.maven.lipamp.common.TestConstants.BASEDIR;
-import static be.hobbiton.maven.lipamp.common.TestConstants.CONF_BASEDIR;
-import static be.hobbiton.maven.lipamp.common.TestConstants.CONF_BASEPATH;
+import static be.hobbiton.maven.lipamp.common.TestConstants.*;
 import static be.hobbiton.maven.lipamp.deb.DebInfo.DebianInfoFile.*;
 import static be.hobbiton.maven.lipamp.deb.DebianPackage.DEFAULT_DIR_MODE;
 import static be.hobbiton.maven.lipamp.deb.DebianPackage.DEFAULT_FILE_MODE;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public class DebianPackageTest {
@@ -33,9 +32,8 @@ public class DebianPackageTest {
     private static final String ROOT_GROUPNAME = "sys";
     private static final String ROOT_USERNAME = "root";
     private static final List<File> CONTROL_FILES = new ArrayList<File>();
-    private static final List<Path> CONTROL_PATHS = Stream.of(CONFFILES.getFilename(), CONTROL.getFilename(), POST_INSTALL.getFilename())
-                    .map(CONF_BASEPATH::resolve)
-                    .collect(Collectors.toList());
+    private static final List<Path> CONTROL_PATHS = Stream.of(CONFFILES.getFilename(), CONTROL.getFilename(), POST_INSTALL.getFilename()).map
+            (CONF_BASEPATH::resolve).collect(Collectors.toList());
     private static final List<ArchiveEntry> DATA_FILES = new ArrayList<ArchiveEntry>();
     private static final Log PLUGIN_LOGGER = new Slf4jLogImpl();
 
@@ -45,12 +43,15 @@ public class DebianPackageTest {
         CONTROL_FILES.add(new File(CONF_BASEDIR, POST_INSTALL.getFilename()));
         DATA_FILES.add(new DirectoryArchiveEntry("./etc", ROOT_USERNAME, ROOT_GROUPNAME, DEFAULT_DIR_MODE));
         DATA_FILES.add(new DirectoryArchiveEntry("./etc/hiapp/", ROOT_USERNAME, ROOT_GROUPNAME, DEFAULT_DIR_MODE));
-        DATA_FILES.add(new FileArchiveEntry("./etc/hiapp/hiapp.conf", new File(BASEDIR, "deb/etc/hiapp/hiapp.conf"), ROOT_USERNAME, ROOT_GROUPNAME, DEFAULT_FILE_MODE));
+        DATA_FILES.add(new FileArchiveEntry("./etc/hiapp/hiapp.conf", new File(BASEDIR, "deb/etc/hiapp/hiapp.conf"), ROOT_USERNAME, ROOT_GROUPNAME,
+                DEFAULT_FILE_MODE));
         DATA_FILES.add(new DirectoryArchiveEntry("./etc/init/", ROOT_USERNAME, ROOT_GROUPNAME, DEFAULT_DIR_MODE));
-        DATA_FILES.add(new FileArchiveEntry("./etc/init/hiapp.conf", new File(BASEDIR, "deb/etc/init/hiapp.conf"), ROOT_USERNAME, ROOT_GROUPNAME, DEFAULT_FILE_MODE));
+        DATA_FILES.add(new FileArchiveEntry("./etc/init/hiapp.conf", new File(BASEDIR, "deb/etc/init/hiapp.conf"), ROOT_USERNAME, ROOT_GROUPNAME,
+                DEFAULT_FILE_MODE));
         DATA_FILES.add(new DirectoryArchiveEntry("./opt/", ROOT_USERNAME, ROOT_GROUPNAME, DEFAULT_DIR_MODE));
         DATA_FILES.add(new DirectoryArchiveEntry("./opt/hiapp/", ROOT_USERNAME, ROOT_GROUPNAME, DEFAULT_DIR_MODE));
-        DATA_FILES.add(new FileArchiveEntry("./opt/hiapp/hiapp.jar", new File("src/test/data/hiapp-1.0.0.jar"), ROOT_USERNAME, ROOT_GROUPNAME, DEFAULT_FILE_MODE));
+        DATA_FILES.add(new FileArchiveEntry("./opt/hiapp/hiapp.jar", new File("src/test/data/hiapp-1.0.0.jar"), ROOT_USERNAME, ROOT_GROUPNAME,
+                DEFAULT_FILE_MODE));
         DATA_FILES.add(new DirectoryArchiveEntry("./var/", ROOT_USERNAME, ROOT_GROUPNAME, DEFAULT_DIR_MODE));
         DATA_FILES.add(new DirectoryArchiveEntry("./var/log/", ROOT_USERNAME, ROOT_GROUPNAME, DEFAULT_DIR_MODE));
         DATA_FILES.add(new DirectoryArchiveEntry("./var/log/hiapp/", "hiapp", "wheel", Integer.parseInt("775", 8)));
@@ -76,10 +77,17 @@ public class DebianPackageTest {
     public void testFromPaths() throws Exception {
         DebianPackage debPackage = new DebianPackage(PLUGIN_LOGGER, CONTROL_PATHS, DATA_FILES);
         debPackage.write(this.outputFile);
-        DebInfo debianInfo = new DebInfo(this.outputFile, PLUGIN_LOGGER);
-        LOGGER.debug(debianInfo.toString());
-        assertEquals(3, debianInfo.getControlFiles().size());
-        assertEquals(11, debianInfo.getDataFiles().size());
+        assertPackage(this.outputFile);
+    }
+
+    @Test(expected = DebianPackage.DebianPackageException.class)
+    public void testNoOutPutFile() {
+        File parentDir = new File("NoSuchDir");
+        assertFalse(parentDir.isDirectory());
+        File output = new File(parentDir, "hiapp-pkg.deb");
+        DebianPackage debPackage = new DebianPackage(PLUGIN_LOGGER, CONTROL_PATHS, DATA_FILES);
+        debPackage.write(output);
+        assertPackage(output);
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -126,7 +134,11 @@ public class DebianPackageTest {
     public void testFromFiles() throws Exception {
         DebianPackage debPackage = new DebianPackage(CONTROL_FILES, DATA_FILES, PLUGIN_LOGGER);
         debPackage.write(this.outputFile);
-        DebInfo debianInfo = new DebInfo(this.outputFile, PLUGIN_LOGGER);
+        assertPackage(this.outputFile);
+    }
+
+    private void assertPackage(File output) {
+        DebInfo debianInfo = new DebInfo(output, PLUGIN_LOGGER);
         LOGGER.debug(debianInfo.toString());
         assertEquals(3, debianInfo.getControlFiles().size());
         assertEquals(11, debianInfo.getDataFiles().size());

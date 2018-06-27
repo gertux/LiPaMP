@@ -1,5 +1,6 @@
 package be.hobbiton.maven.lipamp.plugin;
 
+import be.hobbiton.maven.lipamp.common.LinuxPackagingException;
 import org.codehaus.plexus.util.StringUtils;
 
 public class FolderEntry extends Attributable {
@@ -26,7 +27,10 @@ public class FolderEntry extends Attributable {
     }
 
     public boolean isValid() {
-        return StringUtils.isNotBlank(this.path);
+        if(StringUtils.isNotBlank(this.path)) {
+           return true;
+        }
+        throw new LinuxPackagingException("Invalid folder configuration");
     }
 
     @Override

@@ -36,7 +36,7 @@ public class FolderArtifactStore implements ArtifactStore {
             Files.createDirectories(artifactPath.getParent());
             FileUtils.copyFileIfModified(artifact.getFile(), artifactPath.toFile());
         } catch (IOException e) {
-            throw new ArtifactStoreException("Cannot copy artifact", e);
+            throw new LinuxPackagingException("Cannot copy artifact", e);
         }
     }
 

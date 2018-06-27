@@ -1,5 +1,6 @@
 package be.hobbiton.maven.lipamp.deb;
 
+import be.hobbiton.maven.lipamp.common.LinuxPackagingException;
 import org.apache.maven.plugin.logging.Log;
 import org.codehaus.plexus.util.StringUtils;
 
@@ -42,7 +43,7 @@ public class DebianControl {
 
     public void write(OutputStream output) {
         if (!isValid()) {
-            throw new DebianArchiveException("Control file is invalid");
+            throw new LinuxPackagingException("Control file is invalid");
         }
         try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(output, StandardCharsets.UTF_8))) {
             writeTextField(writer, DebianControlField.PACKAGE, this.packageName);
@@ -59,7 +60,7 @@ public class DebianControl {
             writeNotEmptyTextField(writer, DebianControlField.DEPENDS, this.depends);
             writeNotEmptyTextField(writer, DebianControlField.HOMEPAGE, this.homepage);
         } catch (IOException e) {
-            throw new DebianArchiveException("Could not write control file", e);
+            throw new LinuxPackagingException("Could not write control file", e);
         }
     }
 
@@ -99,13 +100,13 @@ public class DebianControl {
                 saveControlField(fieldName, values);
             }
         } catch (IOException e) {
-            throw new DebianArchiveException("Unable to read Control File", e);
+            throw new LinuxPackagingException("Unable to read Control File", e);
         }
     }
 
     private void addFieldValue(String[] parts, String fieldName, List<String> values) {
         if (parts.length != 2 || parts[0].length() < 1) {
-            throw new DebianArchiveException("Unable to read Control File, unexpected line: " + Arrays.toString(parts));
+            throw new LinuxPackagingException("Unable to read Control File, unexpected line: " + Arrays.toString(parts));
         }
         if (fieldName != null) {
             saveControlField(fieldName, values);
@@ -116,7 +117,7 @@ public class DebianControl {
         if (values != null) {
             values.add(line.trim());
         } else {
-            throw new DebianArchiveException("Unable to read Control File continuation, unexpected line: " + line);
+            throw new LinuxPackagingException("Unable to read Control File continuation, unexpected line: " + line);
         }
     }
 

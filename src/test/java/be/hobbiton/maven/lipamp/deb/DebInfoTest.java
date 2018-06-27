@@ -1,5 +1,6 @@
 package be.hobbiton.maven.lipamp.deb;
 
+import be.hobbiton.maven.lipamp.common.LinuxPackagingException;
 import be.hobbiton.maven.lipamp.common.Slf4jLogImpl;
 import org.apache.maven.plugin.logging.Log;
 import org.junit.Test;
@@ -41,27 +42,27 @@ public class DebInfoTest {
     }
 
     @Test
-    public void testGetInfoPath() throws DebianArchiveException {
+    public void testGetInfoPath() throws LinuxPackagingException {
         assertPackage(new DebInfo(PACKAGE_FILE_PATH, PLUGIN_LOGGER));
     }
 
     @Test
-    public void testGetInfoFile() throws DebianArchiveException {
+    public void testGetInfoFile() throws LinuxPackagingException {
         assertPackage(new DebInfo(PACKAGE_FILE, PLUGIN_LOGGER));
     }
 
-    @Test(expected = DebianArchiveException.class)
-    public void testNoDebianBinary() throws DebianArchiveException {
+    @Test(expected = LinuxPackagingException.class)
+    public void testNoDebianBinary() throws LinuxPackagingException {
         new DebInfo(TEST_DATA_DIR.resolve("hiapp-pkg-no_debian_binary.deb"), PLUGIN_LOGGER);
     }
 
-    @Test(expected = DebianArchiveException.class)
-    public void testNoControl() throws DebianArchiveException {
+    @Test(expected = LinuxPackagingException.class)
+    public void testNoControl() throws LinuxPackagingException {
         new DebInfo(TEST_DATA_DIR.resolve("hiapp-pkg-no_control.deb"), PLUGIN_LOGGER);
     }
 
-    @Test(expected = DebianArchiveException.class)
-    public void testNoData() throws DebianArchiveException {
+    @Test(expected = LinuxPackagingException.class)
+    public void testNoData() throws LinuxPackagingException {
         new DebInfo(TEST_DATA_DIR.resolve("hiapp-pkg-no_data.deb"), PLUGIN_LOGGER);
     }
 

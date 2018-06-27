@@ -7,6 +7,7 @@ import static org.junit.Assert.*;
 import java.io.File;
 import java.io.FileOutputStream;
 
+import be.hobbiton.maven.lipamp.common.LinuxPackagingException;
 import org.apache.maven.plugin.logging.Log;
 import org.codehaus.plexus.util.FileUtils;
 import org.junit.After;
@@ -107,7 +108,7 @@ public class DebianControlTest {
         assertEquals(FILE_ARCHITECTURE, control.getArchitecture());
     }
 
-    @Test(expected = DebianArchiveException.class)
+    @Test(expected = LinuxPackagingException.class)
     public void testOutputInvalid() throws Exception {
         assertTrue(OUTPUT_DIR.mkdirs());
         DebianControl debianControl = new DebianControl();

@@ -1,5 +1,6 @@
 package be.hobbiton.maven.lipamp.plugin;
 
+import be.hobbiton.maven.lipamp.common.LinuxPackagingException;
 import org.apache.maven.artifact.Artifact;
 import org.codehaus.plexus.util.StringUtils;
 
@@ -79,8 +80,11 @@ public class ArtifactPackageEntry extends Attributable {
     }
 
     public boolean isValid() {
-        return (StringUtils.isNotBlank(this.artifactId)) && (StringUtils.isNotBlank(this.groupId)) && (StringUtils.isNotBlank(this.type)) && (StringUtils
-                .isNotBlank(this.destination));
+        if ((StringUtils.isNotBlank(this.artifactId)) && (StringUtils.isNotBlank(this.groupId)) && (StringUtils.isNotBlank(this.type)) && (StringUtils
+                .isNotBlank(this.destination))) {
+            return true;
+        }
+        throw new LinuxPackagingException(String.format("Invalid Artifact specification %s", this.toString()));
     }
 
     public boolean matches(Artifact a) {
