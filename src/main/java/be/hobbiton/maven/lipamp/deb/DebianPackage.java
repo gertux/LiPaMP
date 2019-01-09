@@ -59,7 +59,7 @@ public class DebianPackage implements Packager {
 
     private final void setControlPaths(Collection<Path> controlPaths) {
         if (controlPaths != null && !controlPaths.isEmpty()) {
-            this.controlFiles = controlPaths.stream().filter(Files::isRegularFile).map(path -> new FileArchiveEntry(CURRENT_DIR_PATH.resolve(path.getFileName
+            this.controlFiles = controlPaths.stream().filter(f -> f.toFile().isFile()).map(path -> new FileArchiveEntry(CURRENT_DIR_PATH.resolve(path.getFileName
                     ()).toString(), path.toFile(), ROOTUSERNAME, ROOTGROUPNAME, DEFAULT_FILE_MODE)).collect(Collectors.toList());
         } else {
             throw new IllegalArgumentException("Invalid control files");

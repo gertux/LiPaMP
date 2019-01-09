@@ -534,7 +534,7 @@ public class DebianPackageMojo extends AbstractMojo {
             return Collections.emptyList();
         }
         try (Stream<Path> fileList = Files.list(confFilesPath)) {
-            return fileList.filter(Files::isRegularFile).collect(Collectors.toList());
+            return fileList.filter(f -> f.toFile().isFile()).collect(Collectors.toList());
         } catch (IOException e) {
             throw new MojoExecutionException("Cannot collect control files", e);
         }
@@ -666,8 +666,7 @@ public class DebianPackageMojo extends AbstractMojo {
     }
 
     private Artifact findDependentArtifact(ArtifactPackageEntry artifactEntry) {
-        for (Object depObj : this.project.getDependencyArtifacts()) {
-            Artifact depArtifact = (Artifact) depObj;
+        for (Artifact depArtifact : this.project.getDependencyArtifacts()) {
             if (artifactEntry.matches(depArtifact)) {
                 return depArtifact;
             }
