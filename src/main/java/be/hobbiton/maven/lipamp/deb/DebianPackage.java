@@ -203,7 +203,9 @@ public class DebianPackage implements Packager {
             entry.setMode(fileEntry.getMode());
             tarOutput.putArchiveEntry(entry);
             if (ArchiveEntryType.F.equals(fileEntry.getType())) {
-                copy(new FileInputStream(fileEntry.getFile()), tarOutput);
+                try(FileInputStream fis = new FileInputStream(fileEntry.getFile())) {
+                    copy(fis, tarOutput);
+                }
             }
             tarOutput.closeArchiveEntry();
         }
