@@ -31,8 +31,8 @@
 
 	<licenses>
 		<license>
-			<name>GNU Affero General Public License, Version 3</name>
-			<url>http://www.gnu.org/licenses/agpl-3.0.txt</url>
+			<name>Mozilla Public License Version 2.0</name>
+			<url>https://mozilla.org/MPL/2.0/</url>
 			<distribution>repo</distribution>
 		</license>
 	</licenses>

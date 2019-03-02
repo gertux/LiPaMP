@@ -1,3 +1,8 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not
+   distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+   Copyright 2019 Gert Dewit <gert@hobbiton.be>
+*/
 package be.hobbiton.maven.lipamp.common;
 
 import org.apache.maven.artifact.Artifact;
@@ -11,9 +16,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-/**
- * @author <a href="mailto:gert@hobbiton.be">Gert Dewit</a>
- */
 public class FolderArtifactStore implements ArtifactStore {
     private Path baseDir;
     private String username;

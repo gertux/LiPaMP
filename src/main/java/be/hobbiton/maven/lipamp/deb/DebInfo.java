@@ -1,3 +1,8 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not
+   distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+   Copyright 2019 Gert Dewit <gert@hobbiton.be>
+*/
 package be.hobbiton.maven.lipamp.deb;
 
 import be.hobbiton.maven.lipamp.common.*;
@@ -26,8 +31,6 @@ import static be.hobbiton.maven.lipamp.common.Constants.INVALID_SIZE;
  * Debian binary package handler
  * <p>
  * Doesn't aim to be complete, just to be useful for binary Java based packages
- *
- * @author <a href="mailto:gert@hobbiton.be">Gert Dewit</a>
  */
 public class DebInfo {
     private static final String CONTROL_SUFFIX = "/" + DebianInfoFile.CONTROL.getFilename();
