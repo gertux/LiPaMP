@@ -1,14 +1,9 @@
-image: maven:3-jdk-8
-
-build:
-  stage: build
-  script:
-    - mvn compile
+image: maven:latest
 
 test:
   stage: test
   script:
-    - mvn org.jacoco:jacoco-maven-plugin:prepare-agent verify
+    - mvn clean org.jacoco:jacoco-maven-plugin:prepare-agent verify
 
 coverage:
   stage: deploy
