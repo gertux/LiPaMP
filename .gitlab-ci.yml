@@ -3,9 +3,5 @@ image: maven:latest
 test:
   stage: test
   script:
-    - mvn clean org.jacoco:jacoco-maven-plugin:prepare-agent verify
-
-coverage:
-  stage: deploy
-  script:
-    - bash <(curl -s https://codecov.io/bash)
+    - mvn clean verify
+    - bash <(curl -s https://codecov.io/bash) -Z

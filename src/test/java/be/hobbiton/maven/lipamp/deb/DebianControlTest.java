@@ -185,6 +185,7 @@ public class DebianControlTest {
         debianControl.setArchitecture(FILE_ARCHITECTURE);
         debianControl.setMaintainer(FILE_MAINTAINER);
         debianControl.setDescription(FILE_DESCRIPTION);
+        assertFalse(debianControl.isValid());
     }
 
     @Test
@@ -195,6 +196,7 @@ public class DebianControlTest {
         debianControl.setArchitecture(FILE_ARCHITECTURE);
         debianControl.setMaintainer(FILE_MAINTAINER);
         debianControl.setDescriptionSynopsis(FILE_DESCR_SYNOPSIS);
+        assertFalse(debianControl.isValid());
     }
 
 }
